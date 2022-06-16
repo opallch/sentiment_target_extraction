@@ -1,0 +1,2 @@
+# SentimentTargetExtraction
+Kursprojekt Automatische Sentimentanalyse

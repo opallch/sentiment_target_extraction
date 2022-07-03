@@ -5,14 +5,47 @@ import numpy as np
 import pandas as pd
 
 
-class CorpusReader():
+class CorpusReader:
 
     SENTEXPR = {"sentiment-neg", "sentiment-pos"}
 
-    def __init__(self):
-        pass
+    def __init__(self, anno_dir_path, doc_dir_path):
+        self.annotations = self._align_files(anno_dir_path, doc_dir_path)
+        self.items = self.create_items_for_corpus()
 
-    def xml2tsv(self, xml_path, txt_path):
+    @staticmethod
+    def _align_files(xml_dir_path, text_dir_path):
+        """Align matching xml and text files of mpqa corpus."""
+        # get annotation files
+        xml_files = [
+            os.path.join(root, file) for root, _, files in os.walk(xml_dir_path)
+            for file in files if file.endswith(".xml")
+        ]
+        doc_ids = set([file.split(os.sep)[-2] for file in xml_files])
+        text_files = [
+            os.path.join(root, file) for root, _, files in os.walk(text_dir_path)
+            for file in files if file.split(os.sep)[-1] in doc_ids
+        ]
+        assert len(text_files) == len(xml_files)
+        xml_files.sort(key=lambda x: x.split(os.sep)[-2])
+        text_files.sort(key=lambda x: x.split(os.sep)[-1])
+        return zip(xml_files, text_files)
+
+    def create_items_for_corpus(self):
+        items = []
+        for xml_file, text_file in self.annotations:
+            try:
+                items += self.create_items_for_file(xml_file, text_file)
+            except AttributeError:
+                print(f"File {xml_file} skipped due issue with annotation")
+        df = pd.DataFrame(
+            items,
+            columns=["sentence", "sentexprStart", "sentexprEnd", "targetStart",
+                     "targetEnd", "sentiment", "intensity"]
+        )
+        return df
+
+    def create_items_for_file(self, xml_path, text_path):
         """
         converts xml to tsv
         returns None
@@ -49,17 +82,15 @@ class CorpusReader():
         df = pd.DataFrame(ann_list, columns=["Id", "Type", "StartNode", "EndNode"])
         df[["StartNode", "EndNode"]] = df[["StartNode", "EndNode"]].astype(int)
         # add text
-        with open(txt_path, encoding="utf-8") as txt_file:
+        with open(text_path, encoding="utf-8") as txt_file:
             text = txt_file.read()
             df.loc[:,"Text"] = df.apply(
                 lambda x: text[int(x["StartNode"]):int(x["EndNode"])], axis=1
             )
-            df["Text"].str.replace("\n", "")
         # split df
         sent_df = self.get_sent_df(df)
         sentexpr_df =  self.get_sentexpr_df(df, anns)
         target_df = self.get_target_df(df, anns)
-        targetframe_df = self.get_targetframe_df(df, anns)
         # create tuples:
         items = []
         for sentexpr_tuple in sentexpr_df.iterrows():
@@ -69,22 +100,24 @@ class CorpusReader():
                            (sent_df["EndNode"] >= attitude["EndNode"])].iloc[0]
             target = target_df.loc[attitude["TargetLink"]]
             # add item tuple to items
+            target_start = target["StartNode"] - sent["StartNode"]
+            target_end = target["EndNode"] - sent["StartNode"]
+            if not isinstance(target_start, np.int32):
+                target_start = target_start[0]
+                target_end = target_end[0]
+            if target_start < 0:
+                continue  # target not within sentence
             items.append((
                 sent["Text"],
                 attitude["StartNode"] - sent["StartNode"],
                 attitude["EndNode"] - sent["StartNode"],
-                target["StartNode"] - sent["StartNode"],
-                target["EndNode"] - sent["StartNode"],
+                target_start,
+                target_end,
                 attitude["Sentiment"],
                 attitude["Intensity"]
             ))
-        # return as DataFrame
-        # maybe possible to create without iterating over rows?
-        return pd.DataFrame(
-            items,
-            columns=["sentence", "sentexprStart", "sentexprEnd", "targetStart",
-                    "targetEnd", "sentiment", "intensity"]
-        )
+        # return as list of tuples
+        return items
 
     @staticmethod
     def get_sent_df(df):
@@ -142,10 +175,14 @@ class CorpusReader():
         for feature_obj in ann_features:
             feature_dict = self._get_feature_dict(feature_obj)
             # collect links
-            if feature_dict["sTarget-link"] != "none":
-                link.append(feature_dict["sTarget-link"])
+            if feature_dict.get("sTarget-link") not in {"none", None}:
+                link.append(feature_dict["sTarget-link"].split(",")[-1])
+            elif feature_dict.get("newETarget-link") not in {"none", None}:
+                link.append(feature_dict["newETarget-link"].split(",")[-1])
+            elif feature_dict.get("eTarget-link") not in {"none", None}:
+                link.append(feature_dict["eTarget-link"].split(",")[-1])
             else:
-                link.append(feature_dict["newETarget-link"].split(",")[0])
+                link.append("none")
             idx.append(feature_dict["id"])
         targetframe_df.loc[:,"TargetLink"] = link
         targetframe_df.loc[:,"idx"] = idx
@@ -172,6 +209,13 @@ class CorpusReader():
 
 
 if __name__ == "__main__":
-    corpus_reader = CorpusReader()
-    corpus_reader.xml2tsv("mpqa_corpus/gate_anns/20011125/21.01.04-6923/gateman.mpqa.3.0.xml",
-                          "mpqa_corpus/docs/20011125/21.01.04-6923")
+    anno_dir_path = "mpqa_corpus/gate_anns"
+    text_dir_path = "mpqa_corpus/docs"
+    corpus_reader = CorpusReader(anno_dir_path, text_dir_path)
+    print(corpus_reader.items)
+    i = corpus_reader.items.iloc[1110]
+    print('.......................................................')
+    print(i.sentence)
+    print()
+    print(i.sentence[i.sentexprStart:i.sentexprEnd])
+    print(i.sentence[i.targetStart:i.targetEnd])

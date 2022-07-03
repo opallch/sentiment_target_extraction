@@ -6,9 +6,9 @@ import pandas as pd
 
 
 class CorpusReader():
-    
+
     SENTEXPR = {"sentiment-neg", "sentiment-pos"}
-    
+
     def __init__(self):
         pass
 
@@ -47,6 +47,7 @@ class CorpusReader():
         i = 1  # for annotation index
         ann_list = [[i[1] for i in ann.attributes.items()] for ann in anns]
         df = pd.DataFrame(ann_list, columns=["Id", "Type", "StartNode", "EndNode"])
+        df[["StartNode", "EndNode"]] = df[["StartNode", "EndNode"]].astype(int)
         # add text
         with open(txt_path, encoding="utf-8") as txt_file:
             text = txt_file.read()
@@ -59,10 +60,31 @@ class CorpusReader():
         sentexpr_df =  self.get_sentexpr_df(df, anns)
         target_df = self.get_target_df(df, anns)
         targetframe_df = self.get_targetframe_df(df, anns)
-
-        # well i guess we shall return a tuple collection here.
-        # sentence link still missing - i shall do that before monday
-        return
+        # create tuples:
+        items = []
+        for sentexpr_tuple in sentexpr_df.iterrows():
+            attitude = sentexpr_tuple[1]  # sentiment expression as Series
+            # find right sentence
+            sent = sent_df[(sent_df["StartNode"] <= attitude["StartNode"]) & \
+                           (sent_df["EndNode"] >= attitude["EndNode"])].iloc[0]
+            target = target_df.loc[attitude["TargetLink"]]
+            # add item tuple to items
+            items.append((
+                sent["Text"],
+                attitude["StartNode"] - sent["StartNode"],
+                attitude["EndNode"] - sent["StartNode"],
+                target["StartNode"] - sent["StartNode"],
+                target["EndNode"] - sent["StartNode"],
+                attitude["Sentiment"],
+                attitude["Intensity"]
+            ))
+        # return as DataFrame
+        # maybe possible to create without iterating over rows?
+        return pd.DataFrame(
+            items,
+            columns=["sentence", "sentexprStart", "sentexprEnd", "targetStart",
+                    "targetEnd", "sentiment", "intensity"]
+        )
 
     @staticmethod
     def get_sent_df(df):
@@ -74,10 +96,9 @@ class CorpusReader():
         # create targetframe df to collect target links
         targetframe_df = self.get_targetframe_df(df, anns)
         # slice df and annotations to get senti expressions
-        sentexpr_df = df[df["Type"] == "attitude"]
-        anns = [anns[i] for i in np.where(df["Type"] == "attitude")[0]]
-        # get features
-        ann_features = [ann.getElementsByTagName('Feature') for ann in anns]
+        sentexpr_df, ann_features = self._get_annos_per_type(
+            df, anns, df["Type"] == "attitude"
+        )
         idx = []
         intensity, sentiment, link = [], [], []
         for feature_obj in ann_features:
@@ -101,9 +122,9 @@ class CorpusReader():
         return sentexpr_df[[i is not None for i in sentexpr_df["TargetLink"]]]
 
     def get_target_df(self, df, anns):
-        target_df = df[df["Type"].str.endswith("Target")].copy()
-        anns = [anns[i] for i in np.where(df["Type"].str.endswith("Target"))[0]]
-        ann_features = [ann.getElementsByTagName('Feature') for ann in anns]
+        target_df, ann_features = self._get_annos_per_type(
+            df, anns, df["Type"].str.endswith("Target")
+        )
         idx = []
         for feature_obj in ann_features:
             feature_dict = self._get_feature_dict(feature_obj)
@@ -114,9 +135,9 @@ class CorpusReader():
         return target_df
 
     def get_targetframe_df(self, df, anns):
-        targetframe_df = df[df["Type"] == "targetFrame"].copy()
-        anns = [anns[i] for i in np.where(df["Type"] == "targetFrame")[0]]
-        ann_features = [ann.getElementsByTagName('Feature') for ann in anns]
+        targetframe_df, ann_features = self._get_annos_per_type(
+            df, anns, df["Type"] == "targetFrame"
+        )
         link, idx = [], []
         for feature_obj in ann_features:
             feature_dict = self._get_feature_dict(feature_obj)
@@ -141,6 +162,13 @@ class CorpusReader():
             value = feature.getElementsByTagName('Value')[0].firstChild.data
             feature_dict[name] = value
         return feature_dict
+
+    @staticmethod
+    def _get_annos_per_type(df, anns, condition):
+        label_df = df[condition].copy()
+        anns = [anns[i] for i in np.where(condition)[0]]
+        ann_features = [ann.getElementsByTagName('Feature') for ann in anns]
+        return label_df, ann_features
 
 
 if __name__ == "__main__":

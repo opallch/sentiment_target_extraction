@@ -102,7 +102,7 @@ class CorpusReader:
             # add item tuple to items
             target_start = target["StartNode"] - sent["StartNode"]
             target_end = target["EndNode"] - sent["StartNode"]
-            if not isinstance(target_start, np.int32):
+            if isinstance(target_start, pd.Series):
                 target_start = target_start[0]
                 target_end = target_end[0]
             if target_start < 0:

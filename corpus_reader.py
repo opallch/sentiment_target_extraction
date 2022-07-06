@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+"""
+Reader class for the MPQA corpus extracting sentiment expressions as well as 
+their corresponding targets and the sentences they are in.
+"""
 import os
 from xml.dom import minidom
 
@@ -10,10 +15,19 @@ class CorpusReader:
     SENTEXPR = {"sentiment-neg", "sentiment-pos"}
 
     def __init__(self, anno_dir_path, doc_dir_path):
+        """Constructor of the CorpusReader class.
+
+        Args:
+            anno_dir_path (str): path of the directory containing the xml
+                annotation files created with GATE
+            doc_dir_path (str): path of the directory containing the according
+                text documents
+
+        Attributes:
+            self.annotations: zip object with aligned annotation and text files
+            self.items: pd.DataFrame with sentiment items
+        """
         self.annotations = self._align_files(anno_dir_path, doc_dir_path)
-        self.sent_df = None
-        self.sentexpr_df = None
-        self.target_df = None
         self.items = self.create_items_for_corpus()
 
     @staticmethod
@@ -40,12 +54,14 @@ class CorpusReader:
             os.path.join(root, file) for root, _, files in os.walk(xml_dir_path)
             for file in files if file.endswith(".xml")
         ]
+        # get document files
         doc_ids = set([file.split(os.sep)[-2] for file in xml_files])
         text_files = [
             os.path.join(root, file) for root, _, files in os.walk(text_dir_path)
             for file in files if file.split(os.sep)[-1] in doc_ids
         ]
         assert len(text_files) == len(xml_files), "directories contain varying file numbers"
+        # align by sorting
         xml_files.sort(key=lambda x: x.split(os.sep)[-2])
         text_files.sort(key=lambda x: x.split(os.sep)[-1])
         return zip(xml_files, text_files)
@@ -59,6 +75,7 @@ class CorpusReader:
                 target phrase, end index of target phrase, expressed sentiment,
                 intensity of sentiment]
         """
+        # create empty data frame with colums for all item elements
         items = pd.DataFrame(columns=["sentence",
                                       "sentexprStart",
                                       "sentexprEnd",
@@ -68,71 +85,56 @@ class CorpusReader:
                                       "intensity"])
         for xml_file, text_file in self.annotations:
             try:
+                # concatenate data frame so far with new one for current file
                 items = pd.concat(
                     [items, self.create_items_for_file(xml_file, text_file)],
                     ignore_index=True
                 )
             except AttributeError:
                 print(f"File {xml_file} skipped due to issue with annotation")
+        # clean up final data frame by dropping np.nan
         items.dropna(inplace=True)
+        # ...transforming index columns to integer
         items = items.astype({"sentexprStart": "int",
                               "sentexprEnd": "int",
                               "targetStart": "int",
                               "targetEnd": "int"})
-        return items
+        # ...and reindexing
+        return items.reset_index()
 
     def create_items_for_file(self, xml_path, text_path):
+        """Create a data frame with items for a single file.
+
+        Returns:
+            pd.DataFrame: columns=[sentence, start index of sentiment
+                expression, end index of sentiment expression, start index of
+                target phrase, end index of target phrase, expressed sentiment,
+                intensity of sentiment] for a single file
         """
-        converts xml to tsv
-        returns None
-
-        Example of an annotation in xml:
-        <Annotation Id="423" Type="targetFrame" StartNode="1012" EndNode="1012">
-        <Feature>
-        <Name className="java.lang.String">sTarget-link</Name>
-        <Value className="java.lang.String">none</Value>
-        </Feature>
-        <Feature>
-        <Name className="java.lang.String">id</Name>
-        <Value className="java.lang.String">tfose11</Value>
-        </Feature>
-        <Feature>
-        <Name className="java.lang.String">newETarget-link</Name>
-        <Value className="java.lang.String">none</Value>
-        </Feature>
-        </Annotation>
-
-        Example output:
-        98	1012,1012	targetFrame	id="tfose11" sTarget-link="none" newETarget-link="none"  
-
-        Important functions to read from xml:
-        (1) get all elements by tag name: getElementsByTagName(<tag name>)
-        (2) get attribute value of an element: <elem aka node>.attributes[<attribute name>].value
-        (3) get text in a tag (btw BOT and EOT): <elem aka node>.firstChild.data
-        """
-        xml_file = minidom.parse(xml_path)  # throws FileNotFoundError
-        #output_file = basename(xml_path).replace(".xml", ".tsv")
+        # read annotations
+        xml_file = minidom.parse(xml_path)
         anns = xml_file.getElementsByTagName('Annotation')
-        i = 1  # for annotation index
         ann_list = [[i[1] for i in ann.attributes.items()] for ann in anns]
+        # create data frame with all annotations
         df = pd.DataFrame(ann_list, columns=["Id", "Type", "StartNode", "EndNode"])
         df[["StartNode", "EndNode"]] = df[["StartNode", "EndNode"]].astype(int)
-        # add text
+        # add text for each annotation
         with open(text_path, encoding="utf-8") as txt_file:
             text = txt_file.read()
             df.loc[:,"Text"] = df.apply(
                 lambda x: text[int(x["StartNode"]):int(x["EndNode"])], axis=1
             )
         # split df
-        sent_df = self.get_sent_df(df)
-        sentexpr_df =  self.get_sentexpr_df(df, anns)
-        target_df = self.get_target_df(df, anns)
+        sent_df = self._get_sent_df(df)
+        sentexpr_df = self._get_sentexpr_df(df, anns)
+        target_df = self._get_target_df(df, anns)
         # create item df
         sentexpr_df = sentexpr_df.apply(
             lambda x: self._add_linked_information(x, sent_df, target_df),
             axis=1,
             result_type="expand"
         )
+        # return empty df with right columns to avoid concatenation problems
         if not sentexpr_df.empty:
             sentexpr_df.columns = ["sentence", "sentexprStart", "sentexprEnd",
                                    "targetStart", "targetEnd", "sentiment",
@@ -153,19 +155,29 @@ class CorpusReader:
                 document
             target_df (pd.DataFrame): DataFrame containing target objects of
                 document
+
+        Returns:
+            list: [sentence as text, start index of sentiment expression, end
+                index of sentiment expression, start index of target phrase,
+                end index of target phrase, expressed sentiment, intensity of
+                sentiment]; or: list containing np.nan for all of these if
+                target is not in same sentence
         """
+        # find right sentence
         sent = sent_df[(sent_df["StartNode"] <= attitude["StartNode"]) & \
                        (sent_df["EndNode"] >= attitude["EndNode"])].iloc[0]
+        # get target
         target = target_df.loc[attitude["TargetLink"]]
-        # add item tuple to items
         target_start = target["StartNode"] - sent["StartNode"]
         target_end = target["EndNode"] - sent["StartNode"]
+        # filter and make sure that returned instance is of right type
         if isinstance(target_start, pd.Series):
             target_start = target_start[0]
             target_end = target_end[0]
-        if target_start < 0:
+        # target not within sentence
+        if (target_start < 0) or (sent["EndNode"] - sent["StartNode"] < target_end):
             return [np.nan]*7
-        return (
+        return [
             sent["Text"],
             attitude["StartNode"] - sent["StartNode"],
             attitude["EndNode"] - sent["StartNode"],
@@ -173,17 +185,17 @@ class CorpusReader:
             target_end,
             attitude["Sentiment"],
             attitude["Intensity"]
-        )
+        ]
 
     @staticmethod
-    def get_sent_df(df):
-        """Create a sub dataframe for sentences."""
+    def _get_sent_df(df):
+        """Create a subdataframe for sentences."""
         return df[df["Type"] == "sentence"]
 
-    def get_sentexpr_df(self, df, anns):
-        """Create a sub dataframe for sentiment expressions."""
+    def _get_sentexpr_df(self, df, anns):
+        """Create a subdataframe for sentiment expressions with features."""
         # create targetframe df to collect target links
-        targetframe_df = self.get_targetframe_df(df, anns)
+        targetframe_df = self._get_targetframe_df(df, anns)
         # slice df and annotations to get senti expressions
         sentexpr_df, ann_features = self._get_annos_per_type(
             df, anns, df["Type"] == "attitude"
@@ -210,7 +222,8 @@ class CorpusReader:
         sentexpr_df.loc[:,"TargetLink"] = links
         return sentexpr_df[[i is not None for i in sentexpr_df["TargetLink"]]]
 
-    def get_target_df(self, df, anns):
+    def _get_target_df(self, df, anns):
+        """Create a subdataframe for target annotations with features."""
         target_df, ann_features = self._get_annos_per_type(
             df, anns, df["Type"].str.endswith("Target")
         )
@@ -223,7 +236,8 @@ class CorpusReader:
         target_df.set_index("idx", inplace=True)
         return target_df
 
-    def get_targetframe_df(self, df, anns):
+    def _get_targetframe_df(self, df, anns):
+        """Create a subdataframe for target frames with links."""
         targetframe_df, ann_features = self._get_annos_per_type(
             df, anns, df["Type"] == "targetFrame"
         )
@@ -248,6 +262,7 @@ class CorpusReader:
 
     @staticmethod
     def _get_feature_dict(feature_obj):
+        """Extract features as a dict from annotation features."""
         # collect features
         feature_dict = {}
         for feature in feature_obj:
@@ -258,6 +273,7 @@ class CorpusReader:
 
     @staticmethod
     def _get_annos_per_type(df, anns, condition):
+        """Get annotations of given type as annotation list and df."""
         label_df = df[condition].copy()
         anns = [anns[i] for i in np.where(condition)[0]]
         ann_features = [ann.getElementsByTagName('Feature') for ann in anns]
@@ -269,7 +285,7 @@ if __name__ == "__main__":
     text_dir_path = "mpqa_corpus/docs"
     corpus_reader = CorpusReader(anno_dir_path, text_dir_path)
     print(corpus_reader.items)
-    i = corpus_reader.items.iloc[1110]
+    i = corpus_reader.items.iloc[1100]
     print('.......................................................')
     print(i.sentence)
     print()

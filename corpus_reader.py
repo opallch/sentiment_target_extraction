@@ -11,11 +11,30 @@ class CorpusReader:
 
     def __init__(self, anno_dir_path, doc_dir_path):
         self.annotations = self._align_files(anno_dir_path, doc_dir_path)
+        self.sent_df = None
+        self.sentexpr_df = None
+        self.target_df = None
         self.items = self.create_items_for_corpus()
 
     @staticmethod
     def _align_files(xml_dir_path, text_dir_path):
-        """Align matching xml and text files of mpqa corpus."""
+        """Align matching xml and text files of mpqa corpus.
+
+        It is assumed that the xml directory structure places each xml file in
+        an "ID directory" that has the same name as the according text document
+        in the text document directory.
+
+        Args:
+            xml_dir_path (str): path to directory containing annotation xml's
+            text_dir_path (str): path to directory containing corpus documents
+
+        Returns:
+            zip object: zipped file lists with aligned files
+
+        Raises:
+            AssertionError: if files cannot be aligned due to varying file
+                numbers in directories
+        """
         # get annotation files
         xml_files = [
             os.path.join(root, file) for root, _, files in os.walk(xml_dir_path)
@@ -26,24 +45,41 @@ class CorpusReader:
             os.path.join(root, file) for root, _, files in os.walk(text_dir_path)
             for file in files if file.split(os.sep)[-1] in doc_ids
         ]
-        assert len(text_files) == len(xml_files)
+        assert len(text_files) == len(xml_files), "directories contain varying file numbers"
         xml_files.sort(key=lambda x: x.split(os.sep)[-2])
         text_files.sort(key=lambda x: x.split(os.sep)[-1])
         return zip(xml_files, text_files)
 
     def create_items_for_corpus(self):
-        items = []
+        """Collect items over all files of the corpus.
+
+        Returns:
+            pd.DataFrame: columns=[sentence, start index of sentiment
+                expression, end index of sentiment expression, start index of
+                target phrase, end index of target phrase, expressed sentiment,
+                intensity of sentiment]
+        """
+        items = pd.DataFrame(columns=["sentence",
+                                      "sentexprStart",
+                                      "sentexprEnd",
+                                      "targetStart",
+                                      "targetEnd",
+                                      "sentiment",
+                                      "intensity"])
         for xml_file, text_file in self.annotations:
             try:
-                items += self.create_items_for_file(xml_file, text_file)
+                items = pd.concat(
+                    [items, self.create_items_for_file(xml_file, text_file)],
+                    ignore_index=True
+                )
             except AttributeError:
-                print(f"File {xml_file} skipped due issue with annotation")
-        df = pd.DataFrame(
-            items,
-            columns=["sentence", "sentexprStart", "sentexprEnd", "targetStart",
-                     "targetEnd", "sentiment", "intensity"]
-        )
-        return df
+                print(f"File {xml_file} skipped due to issue with annotation")
+        items.dropna(inplace=True)
+        items = items.astype({"sentexprStart": "int",
+                              "sentexprEnd": "int",
+                              "targetStart": "int",
+                              "targetEnd": "int"})
+        return items
 
     def create_items_for_file(self, xml_path, text_path):
         """
@@ -91,33 +127,53 @@ class CorpusReader:
         sent_df = self.get_sent_df(df)
         sentexpr_df =  self.get_sentexpr_df(df, anns)
         target_df = self.get_target_df(df, anns)
-        # create tuples:
-        items = []
-        for sentexpr_tuple in sentexpr_df.iterrows():
-            attitude = sentexpr_tuple[1]  # sentiment expression as Series
-            # find right sentence
-            sent = sent_df[(sent_df["StartNode"] <= attitude["StartNode"]) & \
-                           (sent_df["EndNode"] >= attitude["EndNode"])].iloc[0]
-            target = target_df.loc[attitude["TargetLink"]]
-            # add item tuple to items
-            target_start = target["StartNode"] - sent["StartNode"]
-            target_end = target["EndNode"] - sent["StartNode"]
-            if isinstance(target_start, pd.Series):
-                target_start = target_start[0]
-                target_end = target_end[0]
-            if target_start < 0:
-                continue  # target not within sentence
-            items.append((
-                sent["Text"],
-                attitude["StartNode"] - sent["StartNode"],
-                attitude["EndNode"] - sent["StartNode"],
-                target_start,
-                target_end,
-                attitude["Sentiment"],
-                attitude["Intensity"]
-            ))
-        # return as list of tuples
-        return items
+        # create item df
+        sentexpr_df = sentexpr_df.apply(
+            lambda x: self._add_linked_information(x, sent_df, target_df),
+            axis=1,
+            result_type="expand"
+        )
+        if not sentexpr_df.empty:
+            sentexpr_df.columns = ["sentence", "sentexprStart", "sentexprEnd",
+                                   "targetStart", "targetEnd", "sentiment",
+                                   "intensity"]
+            return sentexpr_df
+        return pd.DataFrame(columns=["sentence", "sentexprStart", "sentexprEnd",
+                                     "targetStart", "targetEnd", "sentiment",
+                                     "intensity"])
+
+    def _add_linked_information(self, attitude, sent_df, target_df):
+        """Collect the linked information for each sentiment expression.
+
+        This linked information is the information that is added to the items.
+
+        Args:
+            attitude (pd.Series): row from sentexpr_df
+            sent_df (pd.DataFrame): DataFrame containing sentence objects of
+                document
+            target_df (pd.DataFrame): DataFrame containing target objects of
+                document
+        """
+        sent = sent_df[(sent_df["StartNode"] <= attitude["StartNode"]) & \
+                       (sent_df["EndNode"] >= attitude["EndNode"])].iloc[0]
+        target = target_df.loc[attitude["TargetLink"]]
+        # add item tuple to items
+        target_start = target["StartNode"] - sent["StartNode"]
+        target_end = target["EndNode"] - sent["StartNode"]
+        if isinstance(target_start, pd.Series):
+            target_start = target_start[0]
+            target_end = target_end[0]
+        if target_start < 0:
+            return [np.nan]*7
+        return (
+            sent["Text"],
+            attitude["StartNode"] - sent["StartNode"],
+            attitude["EndNode"] - sent["StartNode"],
+            target_start,
+            target_end,
+            attitude["Sentiment"],
+            attitude["Intensity"]
+        )
 
     @staticmethod
     def get_sent_df(df):

@@ -1,10 +1,13 @@
 # doc: spacy.Doc
 # no weight on the edge
 import spacy
+import pandas as pd
 from spacy import displacy
 
 def lowest_common_ancestor(node1, node2, root):
-    """returns the index of the lowest ancestor between 2 nodes."""
+    """returns the lowest ancestor between 2 nodes."""
+    #print("root:", root)
+    
     if node1 == root or node2 == root:
         return root
 
@@ -19,7 +22,7 @@ def lowest_common_ancestor(node1, node2, root):
                 )
         
         result = [elem for elem in result if elem is not None]
-        print(result)
+        #print(result)
 
         if len(result) == 2:
             return root 
@@ -37,24 +40,37 @@ def distance_btw_3_pts(node1, node2, ancestor):
 
 def distance_btw_child_ancestor(child, ancestor):
     """returns the distance between a child and its ancestor."""
-    current_child = child
-    current_parent = current_child.head
-    steps = 1
+    try:
+        #print("child: ", child)
+        #print("ancestor: ", ancestor)
+        if child == ancestor:
+            return 0
+
+        else:
+            current_child = child
+            current_parent = current_child.head
+            steps = 1     
         
-    while current_parent != ancestor:
-        step += 1
-        current_child = current_parent
-        current_parent = current_parent.head
-        
-    return steps
+            while current_parent != ancestor:
+                steps += 1
+                current_child = current_parent
+                current_parent = current_parent.head
+            
+            return steps
+    
+    except AttributeError:
+        return -1
 
 if __name__ == "__main__":
+    items_df = pd.read_pickle("../test_files/items.pkl")
+    item = items_df.iloc[1100]
     nlp = spacy.load('en_core_web_sm')
-    sentence = "The United States has been preparing annual reports on human rights in 190 countries for 25 years while ignoring the real situation at home."
+    sentence = item.sentence
     sent_doc = nlp(sentence)
-    #displacy.serve(sent_doc, style='dep')
+    displacy.serve(sent_doc, style='dep')
     root = next(sent_doc.sents).root
-    lca = lowest_common_ancestor(sent_doc[17], sent_doc[21], root)
+    lca = lowest_common_ancestor(sent_doc[9], sent_doc[15], root)
+    print(lca) 
     print(
-        distance_btw_3_pts(sent_doc[17], sent_doc[21], lca)
+        distance_btw_3_pts(sent_doc[9], sent_doc[15], lca)
     )

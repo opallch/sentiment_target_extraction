@@ -35,13 +35,26 @@ def lowest_common_ancestor(node1, node2, root):
             return None
 
 def distance_btw_3_pts(node1, node2, ancestor):
-    """returns the distance between node 1 and node 2 via their common ancestor."""
-    return  distance_btw_child_ancestor(node1, ancestor) + \
-            distance_btw_child_ancestor(node2, ancestor)
+    """
+    It returns the distance between node 1 and node 2 via their common ancestor.
+    If ancestor is None, it indicates that node1 and node2 are in two different sentences
+    which, we assume, are connected together with a parent node.
+    For calculating the distance in this case, please refer to `_distance_btw_child_ancestor()` 
+    and the `README` in `/features/`.
+    """
+    return  _distance_btw_child_ancestor(node1, ancestor) + \
+            _distance_btw_child_ancestor(node2, ancestor)
             
 
-def distance_btw_child_ancestor(child, ancestor):
-    """returns the distance between a child and its ancestor."""
+def _distance_btw_child_ancestor(child, ancestor):
+    """
+    A help function of `distance_btw_3_pts()` which returns the distance between a child and its ancestor.
+    If ancestor is None, the distance is the distance between the child and its root +1.
+    The reason for adding one is that we assume the corresponding sentence is connected to an external node
+    which binds another sentence.
+    For more information, please refer to `_distance_btw_child_ancestor()` 
+    and the `README` in `/features/`.
+    """
     try:
         if child == ancestor:
             return 0

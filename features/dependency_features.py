@@ -1,26 +1,31 @@
-# in: Serie (a row from the copus reader df)
-# out: feautres vector
+# -*- coding: utf-8 -*-
+"""
+Class for generating features related to dependency parsing by using get_features(),
+which needs the information from a row (pandas.Series) from the corpus reader data frame.
+"""
 
-# GOAL: 
-# first step: create positive instances
-# second step: negativ instances, we need info from constituency parsing! (e.g. NP as candidate)
-
-# TMR:
-# traverse the dependency parse
-# fix Index Error issue lol
 import sys
 sys.path.append("..")
-
-import numpy as np
 import pandas as pd
 import spacy
 from spacy import displacy
 from abstract_features import AbstractFeatures
 from tree_utils.tree_op import lowest_common_ancestor, distance_btw_3_pts
 
+class SpansError(Exception):
+    pass
+
 class DependencyParseFeatures(AbstractFeatures):
     
     def __init__(self):
+        """Constructor of the DependencyParseFeatures class.
+        Attributes:
+            self.nlp(spacy.lang.en.English)
+            self.features(list): list of features
+            self.target_head(spacy.Token)
+            self.senti_head(spacy.Token)
+            self.lowest_ancestor_of_heads(spacy.Token): lowest common ancestor of target head and sentiment expression head
+        """
         self.nlp = spacy.load('en_core_web_sm')
         self.features = []
 
@@ -28,58 +33,100 @@ class DependencyParseFeatures(AbstractFeatures):
         self.senti_head = None
         self.lowest_ancestor_of_heads = None
 
-        self.index_err_count = 0
-        self.rec_err_count = 0
-
-    def _reset_attributes(self):
-        self.features = []
-        self.target_head = None
-        self.senti_head = None
-        self.lowest_ancestor_of_heads = None
-
     def get_features(self, sentence, sent_span_start, sent_span_end, target_span_start, target_span_end):
-        # preparations
-        self._reset_attributes()
-        self.sent_doc = self.nlp(sentence)
-        self._heads_of_senti_target(sentence, sent_span_start, sent_span_end, target_span_start, target_span_end)
-        self._lowest_ancestor_of_heads()
-        # self.target_parent_i = self.sent_doc[self.target_head_i].i
-   
-        # FOR TEST
-        #show dependency parse
-        #displacy.serve(self.sent_doc, style='dep')
-        # for token in self.sent_doc:
-        #      print(f"{token}\t\t{token.dep_}\t\t{token.head.text}\t\t") 
+        """
+        It creates and returns the feature vector for the incoming instance.
+        Args:
+            sentence(str): 
+            sent_span_start(int): span start of sentiment expression
+            sent_span_end(int): span end of sentiment expression
+            target_span_start(int): span start of target
+            target_span_end(int): span end of target
+        
+        Returns:
+            list: list of features
+        
+        Raises:
+            SpansError: If target head and sentiment expression head canno be found in the sentence.
+            ["", -1] will be returned as the features vector in this case.
+            This can be traced back to the mistakes in the spans
+            of sentiment expression and/or target from the annotation.
+        """
+        # preparatory calculations for creating the features
+        self._preparation_for_features(sentence, sent_span_start, sent_span_end, target_span_start, target_span_end)
 
-        # features
-        if self.senti_head and self.target_head:
-            self._rel_btw_heads()
-            self._distance_btw_heads()
-        else:
+        # create and save features
+        try:
+            if self.senti_head is None or self.target_head is None:
+                raise SpansError
+            else:
+                self._rel_btw_heads()
+                self._distance_btw_heads()
+
+        except SpansError:
             self.features.append("")
             self.features.append(-1)
 
         return self.features
     
+    def _preparation_for_features(self, sentence, sent_span_start, sent_span_end, target_span_start, target_span_end):
+        """
+        It completes preparatory work for feature engineering, most importantly,
+        calculates the heads of the target/sentiment expression and 
+        the lowest ancestor of these heads in the dependency parse.
+        Args:
+            sentence(str): sentence which includes the sentiment expression and target
+            sent_span_start(int): span start of sentiment expression
+            sent_span_end(int): span end of sentiment expression
+            target_span_start(int): span start of target
+            target_span_end(int): span end of target
+        """
+        self._reset_attributes()
+        self.sent_doc = self.nlp(sentence)
+        self._heads_of_senti_target(sentence, sent_span_start, sent_span_end, target_span_start, target_span_end)
+        self._lowest_ancestor_of_heads()
+
+    def _reset_attributes(self):
+        """It resets some of the attriutes for working with another sentence."""
+        self.features = []
+        self.target_head = None
+        self.senti_head = None
+        self.lowest_ancestor_of_heads = None
+    
     def _heads_of_senti_target(self, sentence, senti_span_start, senti_span_end, target_span_start, target_span_end):
-        """finds the heads of sentiment expr and target."""
+        """
+        It finds the heads of the given sentiment expression and target and saves them as attributes.
+        Args:
+            sentence(str): sentence which includes the sentiment expression and target
+            sent_span_start(int): span start of sentiment expression
+            sent_span_end(int): span end of sentiment expression
+            target_span_start(int): span start of target
+            target_span_end(int): span end of target
+        """
         senti_start_i, senti_end_i, target_start_i, target_end_i = \
             self._span2i(sentence, senti_span_start, senti_span_end, target_span_start, target_span_end)
 
-        # find the indices of the target head and its parent
         self.senti_head = self._find_head(senti_start_i, senti_end_i, self.sent_doc)
         self.target_head = self._find_head(target_start_i, target_end_i, self.sent_doc)
-
-        # print("target head:", self.target_head)
-        # print("senti head:", self.senti_head)
     
-    def _span2i(self,sentence, senti_span_start, senti_span_end, target_span_start, target_span_end):
-        """coverts the spans of sentiment expr and target to token indices in the sentence."""
+    def _span2i(self, sentence, senti_span_start, senti_span_end, target_span_start, target_span_end):
+        """
+        It coverts the spans of sentiment expression and target to token indices in the sentence.
+        Args:
+            sentence(str): sentence which includes the sentiment expression and target
+            sent_span_start(int): span start of sentiment expression
+            sent_span_end(int): span end of sentiment expression
+            target_span_start(int): span start of target
+            target_span_end(int): span end of target
+        
+        Returns:
+            senti_start_i(int): starting token index of the sentiment expression in the sentence
+            senti_end_i(int): ending token index of the sentiment expression in the sentence
+            target_start_i(int): starting token index of the target in the sentence
+            target_end_i(int): ending token index of the target in the sentence 
+        """
         sent_ex = [token.text for token in self.nlp(sentence[senti_span_start:senti_span_end])]
         target = [token.text for token in self.nlp(sentence[target_span_start:target_span_end])]
-        
-        #print("sent ex from span: ", sent_ex)
-        #print("target from span: ", target)
 
         # find the start and end indices of sentiment expr. and target respectively
         senti_start_i, senti_end_i = self._find_token_i(sent_ex, self.sent_doc)
@@ -88,7 +135,22 @@ class DependencyParseFeatures(AbstractFeatures):
         return senti_start_i, senti_end_i, target_start_i, target_end_i
 
     def _find_token_i(self, phrase, sent_doc):
-        """returns the start and end indices of the given phrase in a sentence."""
+        """
+        It returns the start and end indices of the given phrase in a sentence.
+        Args:
+            phrase(list of str): list of tokens in the phrase
+            sent_doc(spacy.Doc): Doc object of the corresponding sentence
+
+        Returns:
+            start_i: starting token index of the phrase in the sentence
+            end_i: ending token index of the phrase in the sentence
+
+        Raises:
+            IndexError: If the given phrase cannot be found in the sent_doc.
+            -1, -1 will be returned as the indices in this case.
+            This can be traced back to the mistakes in the spans
+            of sentiment expression and/or target from the annotation. 
+        """
         try:
             start_i, end_i = -1, -1
             for token in sent_doc:
@@ -109,13 +171,19 @@ class DependencyParseFeatures(AbstractFeatures):
             return start_i, end_i # end_i is used for slicing, so exclusive
         
         except IndexError:
-            # DUE TO INCORRECT SPAN FROM GATE
-            print("Incorrect Spans")
-            self.index_err_count += 1
             return -1, -1
 
     def _find_head(self, phrase_start_i, phrase_end_i, sent_doc):
-        """returns the head of the a phrase."""
+        """
+        It returns the head of the a phrase.
+        Args:
+            phrase_start_i: starting token index of the phrase in the sentence
+            phrase_end_i: ending token index of the phrase in the sentence
+            sent_doc: Doc object of the corresponding sentence
+        
+        Returns:
+            head(spacy.Token): head of the phrase
+        """
         head = None
         # for one-token-phrase
         if phrase_end_i - phrase_start_i == 1:
@@ -130,63 +198,60 @@ class DependencyParseFeatures(AbstractFeatures):
         return head
 
     def _lowest_ancestor_of_heads(self):
-
+        """
+        It finds lowest common ancestor of the target head and sentiment expression head
+        and save it as attribute.
+        """
         self.lowest_ancestor_of_heads = lowest_common_ancestor(self.senti_head, 
                                                                 self.target_head,
                                                                 self._find_root())
 
     def _find_root(self):
-        """ returns None if senti head and target head are in different sentences"""
+        """It returns None if senti head and target head are in different sentences."""
         for sent in self.sent_doc.sents:
-            # print("root: ", sent.root)
             if self.senti_head in sent and self.target_head in sent:
                 return sent.root
-
         return None
 
     def _distance_btw_heads(self):
+        """
+        It finds the disgtance between the target head and the sentiment expression head.
+        For more information, please refer to README.
+        """
         self.features.append(
             distance_btw_3_pts(self.senti_head, self.target_head, self.lowest_ancestor_of_heads)
         )
 
     def _rel_btw_heads(self):
-        try:
-            current_child = self.target_head
-            # current_parent = current_child.head
-            
-            # while current_parent != self.lowest_ancestor_of_heads:
-            #     current_child = current_parent
-            #     current_parent = current_parent.head
-            
-            self.features.append(current_child.dep_)
-        
-        except AttributeError:
-            self.features.append("")
-        
-def single_instance(n):
-    items_df = pd.read_pickle("../test_files/items.pkl")
+        """
+        Finds the relation between the target head and the sentiment expression head.
+        For more information, please refer to README.
+        """
+        current_child = self.target_head
+        self.features.append(current_child.dep_)
 
+
+def test_single_instance(n, items_df, dep_feature):
     item = items_df.iloc[n]
     sent = item.sentence
     print(sent)
-    #print(f"sentExpr: {sent[item.sentexprStart:item.sentexprEnd]}\nTarget: {sent[item.targetStart:item.targetEnd]}")
     
-    print()
-    dep_feature = DependencyParseFeatures()
     print(
         dep_feature.get_features(sent, item.sentexprStart, item.sentexprEnd, item.targetStart, item.targetEnd,)
     )
     print("target head:", dep_feature.target_head)
     print("senti head:", dep_feature.senti_head)
     
+    # show parse info in text
+    for token in dep_feature.sent_doc:
+        print(f"{token}\t\t{token.dep_}\t\t{token.head.text}\t\t") 
     
-
-def write_all_instances():
-    items_df = pd.read_pickle("../test_files/items.pkl")
-    dep_feature = DependencyParseFeatures()
-    with open("../test_files/test_dependency3", "w") as f_out:
+    #visualize dependency parse
+    displacy.serve(dep_feature.sent_doc, style='dep')
+    
+def test_write_all_instances_to_file(items_df, dep_feature):
+    with open("../test_files/test_dependency", "w") as f_out:
         for idx in range(0,len(items_df)):
-            #print(idx)
             item = items_df.iloc[idx]
             sent = item.sentence
             print(
@@ -195,13 +260,7 @@ def write_all_instances():
             )
     
 if __name__ == "__main__":
-    #single_instance(441)
-    write_all_instances()
-    
-"""The United States has been preparing annual reports on human rights in 190 countries for 25 years while ignoring the real situation at home.
-104 139 0 17
-SENTI: ignoring the real situation at home
-TARGET: The United States
-
-pretty print dependency tree: https://stackoverflow.com/questions/36610179/how-to-get-the-dependency-tree-with-spacy
-"""
+    items_df = pd.read_pickle("../test_files/items.pkl")
+    dep_feature = DependencyParseFeatures()
+    #single_instance(441, items_df, dep_feature)
+    test_write_all_instances_to_file(items_df, dep_feature)

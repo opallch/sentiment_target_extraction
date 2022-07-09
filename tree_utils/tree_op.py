@@ -6,7 +6,8 @@ from spacy import displacy
 
 def lowest_common_ancestor(node1, node2, root):
     """returns the lowest ancestor between 2 nodes."""
-    #print("root:", root)
+    if root is None:
+        return None
     
     if node1 == root or node2 == root:
         return root
@@ -35,27 +36,34 @@ def lowest_common_ancestor(node1, node2, root):
 
 def distance_btw_3_pts(node1, node2, ancestor):
     """returns the distance between node 1 and node 2 via their common ancestor."""
-    return distance_btw_child_ancestor(node1, ancestor) + \
+    return  distance_btw_child_ancestor(node1, ancestor) + \
             distance_btw_child_ancestor(node2, ancestor)
+            
 
 def distance_btw_child_ancestor(child, ancestor):
     """returns the distance between a child and its ancestor."""
     try:
-        #print("child: ", child)
-        #print("ancestor: ", ancestor)
         if child == ancestor:
             return 0
-
+        
         else:
             current_child = child
             current_parent = current_child.head
-            steps = 1     
-        
-            while current_parent != ancestor:
+            steps = 1
+
+            if ancestor is None: # go along way to the root + 1
+                while current_child.dep_ != 'ROOT':
+                    steps += 1
+                    current_child = current_parent
+                    current_parent = current_parent.head
                 steps += 1
-                current_child = current_parent
-                current_parent = current_parent.head
-            
+                    
+            else:
+                while current_parent != ancestor:
+                    steps += 1
+                    current_child = current_parent
+                    current_parent = current_parent.head
+                
             return steps
     
     except AttributeError:

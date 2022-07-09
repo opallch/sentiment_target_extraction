@@ -70,8 +70,8 @@ class DependencyParseFeatures(AbstractFeatures):
         self.senti_head = self._find_head(senti_start_i, senti_end_i, self.sent_doc)
         self.target_head = self._find_head(target_start_i, target_end_i, self.sent_doc)
 
-        print("target head:", self.target_head)
-        print("senti head:", self.senti_head)
+        # print("target head:", self.target_head)
+        # print("senti head:", self.senti_head)
     
     def _span2i(self,sentence, senti_span_start, senti_span_end, target_span_start, target_span_end):
         """coverts the spans of sentiment expr and target to token indices in the sentence."""
@@ -136,14 +136,13 @@ class DependencyParseFeatures(AbstractFeatures):
                                                                 self._find_root())
 
     def _find_root(self):
-        root = None
+        """ returns None if senti head and target head are in different sentences"""
         for sent in self.sent_doc.sents:
-            print("root: ", sent.root)
+            # print("root: ", sent.root)
             if self.senti_head in sent and self.target_head in sent:
-                root = sent.root
+                return sent.root
 
-        print(root)
-        return root
+        return None
 
     def _distance_btw_heads(self):
         self.features.append(
@@ -183,33 +182,21 @@ def single_instance(n):
     
 
 def write_all_instances():
-    try:
-        skipped = [441, 465, 611, 703, 905]
-        items_df = pd.read_pickle("../test_files/items.pkl")
-        dep_feature = DependencyParseFeatures()
-        with open("../test_files/test_dependency3", "w") as f_out:
-            for idx in range(0,len(items_df)):
-                if idx in skipped:
-                    continue
-                
-                print(idx)
-                item = items_df.iloc[idx]
-                sent = item.sentence
-                print(
-                    dep_feature.get_features(sent, item.sentexprStart, item.sentexprEnd, item.targetStart, item.targetEnd,)
-                    , file=f_out
-                )
-        
-        print(f"SpansError:{dep_feature.index_err_count}\nRecursionError: {dep_feature.rec_err_count}")
+    items_df = pd.read_pickle("../test_files/items.pkl")
+    dep_feature = DependencyParseFeatures()
+    with open("../test_files/test_dependency3", "w") as f_out:
+        for idx in range(0,len(items_df)):
+            #print(idx)
+            item = items_df.iloc[idx]
+            sent = item.sentence
+            print(
+                dep_feature.get_features(sent, item.sentexprStart, item.sentexprEnd, item.targetStart, item.targetEnd,)
+                , file=f_out
+            )
     
-    except RecursionError:
-        print("RecursionError")
-        dep_feature.rec_err_count += 1
-    
-
 if __name__ == "__main__":
-    single_instance(905)
-    #write_all_instances()
+    #single_instance(441)
+    write_all_instances()
     
 """The United States has been preparing annual reports on human rights in 190 countries for 25 years while ignoring the real situation at home.
 104 139 0 17

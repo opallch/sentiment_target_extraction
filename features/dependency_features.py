@@ -33,15 +33,11 @@ class DependencyParseFeatures(AbstractFeatures):
         self.senti_head = None
         self.lowest_ancestor_of_heads = None
 
-    def get_features(self, sentence, sent_span_start, sent_span_end, target_span_start, target_span_end):
+    def get_features(self, df_row):
         """
         It creates and returns the feature vector for the incoming instance.
         Args:
-            sentence(str): 
-            sent_span_start(int): span start of sentiment expression
-            sent_span_end(int): span end of sentiment expression
-            target_span_start(int): span start of target
-            target_span_end(int): span end of target
+            df_row(pd.Series): a row from the corpus reader dataframe.
         
         Returns:
             list: list of features
@@ -52,6 +48,12 @@ class DependencyParseFeatures(AbstractFeatures):
             This can be traced back to the mistakes in the spans
             of sentiment expression and/or target from the annotation.
         """
+        sentence = df_row.sentence
+        sent_span_start = df_row.sentexprStart
+        sent_span_end = df_row.sentexprEnd
+        target_span_start = df_row.targetStart
+        target_span_end = df_row.targetEnd
+        
         # preparatory calculations for creating the features
         self._preparation_for_features(sentence, sent_span_start, sent_span_end, target_span_start, target_span_end)
 

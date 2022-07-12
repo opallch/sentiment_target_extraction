@@ -196,6 +196,8 @@ class DependencyParseFeatures(AbstractFeatures):
             tokens_in_phrase = sent_doc[phrase_start_i:phrase_end_i]
             for token in tokens_in_phrase:
                 if token.head not in tokens_in_phrase or token.dep_ == 'ROOT':
+                    # if token.dep_ == 'ROOT':
+                    #     print(token.dep == 8206900633647566924)
                     head = token
         return head
 
@@ -230,7 +232,7 @@ class DependencyParseFeatures(AbstractFeatures):
         For more information, please refer to README.
         """
         current_child = self.target_head
-        self.features.append(current_child.dep_)
+        self.features.append(current_child.dep)
 
 
 def test_single_instance(n, items_df, dep_feature):
@@ -255,9 +257,8 @@ def test_write_all_instances_to_file(items_df, dep_feature):
     with open("../test_files/test_dependency", "w") as f_out:
         for idx in range(0,len(items_df)):
             item = items_df.iloc[idx]
-            sent = item.sentence
             print(
-                dep_feature.get_features(sent, item.sentexprStart, item.sentexprEnd, item.targetStart, item.targetEnd,)
+                dep_feature.get_features(item)
                 , file=f_out
             )
     

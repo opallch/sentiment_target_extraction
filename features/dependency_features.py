@@ -64,10 +64,11 @@ class DependencyParseFeatures(AbstractFeatures):
             else:
                 self._rel_btw_heads()
                 self._distance_btw_heads()
+                self._pos_senti_head()
+                self._pos_target_head()
 
         except SpansError:
-            self.features.append("")
-            self.features.append(-1)
+            self.features.extend([-1,-1,-1,-1])
 
         return self.features
     
@@ -233,6 +234,12 @@ class DependencyParseFeatures(AbstractFeatures):
         """
         current_child = self.target_head
         self.features.append(current_child.dep)
+    
+    def _pos_senti_head(self):
+        self.features.append(self.senti_head.pos)
+
+    def _pos_target_head(self):
+        self.features.append(self.target_head.pos)
 
 
 def test_single_instance(n, items_df, dep_feature):

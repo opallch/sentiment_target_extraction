@@ -9,14 +9,16 @@ sys.path.append("..")
 import pandas as pd
 import spacy
 from spacy import displacy
-from abstract_features import AbstractFeatures
+from .abstract_features import AbstractFeatures
 from tree_utils.tree_op import lowest_common_ancestor, distance_btw_3_pts
+
 
 class SpansError(Exception):
     pass
 
+
 class DependencyParseFeatures(AbstractFeatures):
-    
+
     def __init__(self):
         """Constructor of the DependencyParseFeatures class.
         Attributes:

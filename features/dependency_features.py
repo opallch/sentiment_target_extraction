@@ -9,7 +9,9 @@ sys.path.append("..")
 import pandas as pd
 import spacy
 from spacy import displacy
-from .abstract_features import AbstractFeatures
+from sklearn.preprocessing import OneHotEncoder
+from abstract_features import AbstractFeatures
+from feature_utils import DEP_TAGS, FINE_GRAINED_POS_TAGS
 from tree_utils.tree_op import lowest_common_ancestor, distance_btw_3_pts
 
 
@@ -35,6 +37,12 @@ class DependencyParseFeatures(AbstractFeatures):
         self.senti_head = None
         self.lowest_ancestor_of_heads = None
 
+        self.ohe_dep = OneHotEncoder(handle_unknown='ignore')
+        self.ohe_dep.fit([[tag] for tag in DEP_TAGS])
+
+        self.ohe_pos = OneHotEncoder(handle_unknown='ignore')
+        self.ohe_pos.fit([[tag] for tag in FINE_GRAINED_POS_TAGS])
+
     def get_features(self, df_row):
         """
         It creates and returns the feature vector for the incoming instance.
@@ -46,7 +54,7 @@ class DependencyParseFeatures(AbstractFeatures):
         
         Raises:
             SpansError: If target head and sentiment expression head canno be found in the sentence.
-            ["", -1] will be returned as the features vector in this case.
+            A list of -1.0 will be returned as the features vector in this case.
             This can be traced back to the mistakes in the spans
             of sentiment expression and/or target from the annotation.
         """
@@ -65,12 +73,12 @@ class DependencyParseFeatures(AbstractFeatures):
                 raise SpansError
             else:
                 self._rel_btw_heads()
-                self._distance_btw_heads()
                 self._pos_senti_head()
                 self._pos_target_head()
+                self._distance_btw_heads()
 
         except SpansError:
-            self.features.extend([-1, -1, -1, -1])
+            self.features.extend([-1.0] * 184) # WARN: hardcode the length of vector
 
         return self.features
     
@@ -199,8 +207,6 @@ class DependencyParseFeatures(AbstractFeatures):
             tokens_in_phrase = sent_doc[phrase_start_i:phrase_end_i]
             for token in tokens_in_phrase:
                 if token.head not in tokens_in_phrase or token.dep_ == 'ROOT':
-                    # if token.dep_ == 'ROOT':
-                    #     print(token.dep == 8206900633647566924)
                     head = token
         return head
 
@@ -228,41 +234,51 @@ class DependencyParseFeatures(AbstractFeatures):
         self.features.append(
             distance_btw_3_pts(self.senti_head, self.target_head, self.lowest_ancestor_of_heads)
         )
+    
+    def _pos_senti_head(self):
+        self.features.extend(
+            list(
+                self.ohe_pos.transform([[self.senti_head.tag_]]).toarray()[0]
+                )
+            )
 
+    def _pos_target_head(self):
+      self.features.extend(
+            list(
+                self.ohe_pos.transform([[self.target_head.tag_]]).toarray()[0]
+                )
+            )
+    
     def _rel_btw_heads(self):
         """
         Finds the relation between the target head and the sentiment expression head.
         For more information, please refer to README.
         """
-        current_child = self.target_head
-        self.features.append(current_child.dep)
-    
-    def _pos_senti_head(self):
-        self.features.append(self.senti_head.pos)
-
-    def _pos_target_head(self):
-        self.features.append(self.target_head.pos)
+        # current_child is self.target_head
+        self.features.extend(
+            list(
+                self.ohe_dep.transform([[self.target_head.dep_]]).toarray()[0]
+                )
+            )
     
 def test_single_instance(n, items_df, dep_feature):
     item = items_df.iloc[n]
-    sent = item.sentence
-    print(sent)
     
     print(
-        dep_feature.get_features(sent, item.sentexprStart, item.sentexprEnd, item.targetStart, item.targetEnd,)
+        len(dep_feature.get_features(item))
     )
     print("target head:", dep_feature.target_head)
     print("senti head:", dep_feature.senti_head)
     
     # show parse info in text
-    for token in dep_feature.sent_doc:
-        print(f"{token}\t\t{token.dep_}\t\t{token.head.text}\t\t") 
+    # for token in dep_feature.sent_doc:
+    #     print(f"{token}\t\t{token.dep_}\t\t{token.head.text}\t\t") 
     
     #visualize dependency parse
-    displacy.serve(dep_feature.sent_doc, style='dep')
+    #displacy.serve(dep_feature.sent_doc, style='dep')
     
 def test_write_all_instances_to_file(items_df, dep_feature):
-    with open("../test_files/test_dependency", "w") as f_out:
+    with open("../test_files/test_dependency.csv", "w") as f_out:
         for idx in range(0,len(items_df)):
             item = items_df.iloc[idx]
             print(
@@ -273,5 +289,5 @@ def test_write_all_instances_to_file(items_df, dep_feature):
 if __name__ == "__main__":
     items_df = pd.read_pickle("../test_files/items.pkl")
     dep_feature = DependencyParseFeatures()
-    #single_instance(441, items_df, dep_feature)
-    test_write_all_instances_to_file(items_df, dep_feature)
+    test_single_instance(441, items_df, dep_feature)
+    #test_write_all_instances_to_file(items_df, dep_feature)

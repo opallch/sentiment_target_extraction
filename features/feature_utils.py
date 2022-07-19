@@ -1,5 +1,3 @@
-import re
-
 from nltk.tree import ParentedTree, Tree
 from nltk.tokenize import word_tokenize
 

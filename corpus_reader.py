@@ -9,7 +9,6 @@ from xml.dom import minidom
 import numpy as np
 import pandas as pd
 
-
 class CorpusReader:
 
     SENTEXPR = {"sentiment-neg", "sentiment-pos"}
@@ -284,10 +283,31 @@ if __name__ == "__main__":
     anno_dir_path = "mpqa_corpus/gate_anns"
     text_dir_path = "mpqa_corpus/docs"
     corpus_reader = CorpusReader(anno_dir_path, text_dir_path)
-    print(corpus_reader.items)
-    i = corpus_reader.items.iloc[1100]
-    print('.......................................................')
-    print(i.sentence)
-    print()
-    print(i.sentence[i.sentexprStart:i.sentexprEnd])
-    print(i.sentence[i.targetStart:i.targetEnd])
+    #print(corpus_reader.items)
+    corpus_reader.items.to_pickle("./test_files/items.pkl") # or json?
+    # pd.read_pickle("./test_files/items.pkl") to load
+
+    with open ("./test_files/items", "w") as f_out:
+        for idx in range(0, len(corpus_reader.items)):
+            i = corpus_reader.items.iloc[idx]
+            print(idx, file=f_out)
+            print(i.sentence, file=f_out)
+            f_out.write("{} {} {} {}\nSENTI: {}\nTARGET: {}\n\n".format(
+                i.sentexprStart, 
+                i.sentexprEnd, 
+                i.targetStart, 
+                i.targetEnd,
+                i.sentence[i.sentexprStart:i.sentexprEnd],
+                i.sentence[i.targetStart:i.targetEnd]
+                )
+            )
+    
+    #i = corpus_reader.items.iloc[8]
+    
+    # print(i)
+    # print('.......................................................')
+    # print(i.sentence)
+    # print()
+    # print(i.sentexprStart, i.sentexprEnd, i.targetStart, i.targetEnd)
+    # print(i.sentence[i.sentexprStart:i.sentexprEnd])
+    # print(i.sentence[i.targetStart:i.targetEnd])

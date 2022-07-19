@@ -70,7 +70,7 @@ class DependencyParseFeatures(AbstractFeatures):
                 self._pos_target_head()
 
         except SpansError:
-            self.features.extend([-1,-1,-1,-1])
+            self.features.extend([-1, -1, -1, -1])
 
         return self.features
     
@@ -242,8 +242,7 @@ class DependencyParseFeatures(AbstractFeatures):
 
     def _pos_target_head(self):
         self.features.append(self.target_head.pos)
-
-
+    
 def test_single_instance(n, items_df, dep_feature):
     item = items_df.iloc[n]
     sent = item.sentence

@@ -10,7 +10,7 @@ from benepar import Parser
 
 from .constituency_features import ConstituencyParseFeatures
 from .dependency_features import DependencyParseFeatures
-from .feature_utils import parse_sent
+from .feature_utils import parse_sent, InvalidFilenameError, transform_spans
 
 
 class FeatureVectorCreator:
@@ -35,11 +35,17 @@ class FeatureVectorCreator:
         self._list_of_vecs = []
 
     def _load_df(self, filename:str):
-        if filename.endswith('pkl'):
-            return pd.read_pickle(filename)
-        elif filename.endswith('csv'):
-            return pd.read_csv(filename)
-    
+        if filename.endswith("pkl"):
+            df = pd.read_pickle(filename)
+        elif filename.endswith("csv"):
+            df =  pd.read_csv(filename)
+        else:
+            raise InvalidFilenameError("Input file must be .csv or .pkl")
+        df[["sentexprStart", "sentexprEnd", "targetStart", "targetEnd"]] = df.apply(
+            lambda x: transform_spans(x), axis=1, result_type="expand"
+        )
+        return df
+
     def get_vectors(self) -> None:
         """Wrapper function for handling the feature vectors.
 
@@ -53,12 +59,6 @@ class FeatureVectorCreator:
 
     def _all_features_for_all_instances(self) -> None:
         """Append the instance features lists to self._list_of_vecs."""
-        # for i in range (0, len(self._df_corpus_reader)):
-            # self._append_vector_to_list(
-                # self._all_features_for_each_instance(
-                    # self._df_corpus_reader.iloc[i]
-                # )
-            # )
         self._df_corpus_reader.apply(
             lambda x: self._append_vector_to_list(
                 self._all_features_for_each_instance(x),
@@ -78,20 +78,22 @@ class FeatureVectorCreator:
         for features_class in self._features_classes:
             features = features_class.get_features(df_row)
             if features is not None:
-                all_vectors.append(features)
+                all_vectors += features
             else:
                 return None
-        return [f for vec in all_vectors for f in vec]
+        return all_vectors
 
     def _write_vectors_to_file(self) -> None:
         """Write self.df_vectors to the ouput `.pkl` file."""
-        if self._filename_out.endswith('pkl'):
+        if self._filename_out.endswith("pkl"):
             pd.to_pickle(
             self._list_of_vecs2df(),
             self._filename_out
         )
-        elif self._filename_out.endswith('csv'):
+        elif self._filename_out.endswith("csv"):
             self._list_of_vecs2df().to_csv(self._filename_out)
+        else:
+            raise InvalidFilenameError("Output file must be .csv or .pkl")
 
     def _list_of_vecs2df(self) -> pd.DataFrame:
         """Turn `self._list_of_vecs` into a dataframe."""
@@ -100,16 +102,7 @@ class FeatureVectorCreator:
     def _trees(self):
         """Parse all sentences once to avoid double parsing."""
         parser = Parser("benepar_en3")
-        trees = {}
-        for sent in self._df_corpus_reader["sentence"].unique():
-            if sent not in trees:
-                trees[sent] = parse_sent(sent, parser)
-        return trees
-
-
-if __name__ == "__main__":
-    fvc = FeatureVectorCreator("../test_files/items.pkl", "../test_files/test_all_features.pkl")
-    fvc.get_vectors()
-
-    # to check if the dataframe looks good
-    print(pd.read_pickle("../test_files/test_all_features.pkl")[:10])
+        return {
+            sent: parse_sent(sent, parser)
+            for sent in self._df_corpus_reader["sentence"].unique()
+        }

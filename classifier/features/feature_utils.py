@@ -144,6 +144,10 @@ POS_TAGS = ["NP", "VP", "PP", "S", "TOP", "NML", "ADJP", "SBAR", "WHNP", "PRN",
             "FW", "VBP", "SINV", "SQ", "PRP$", "NNPS", "JJ", "VBZ", "RB", "VBZ"]
 
 
+class InvalidFilenameError(Exception):
+    pass
+
+
 class IndexableSpannotatableParentedTree(ParentedTree):
 
     def __init__(self, node, children=None):
@@ -217,12 +221,12 @@ def get_subtree_by_span(tree, span_start, span_end):
 
 
 def transform_spans(df_row):
-    return {
-        "sentexprStart": len(word_tokenize(df_row["sentence"][:df_row["sentexprStart"]])),
-        "sentexprEnd": len(word_tokenize(df_row["sentence"][:df_row["sentexprEnd"]])) - 1,
-        "targetStart": len(word_tokenize(df_row["sentence"][:df_row["targetStart"]])),
-        "targetEnd": len(word_tokenize(df_row["sentence"][:df_row["targetEnd"]])) - 1
-    }
+    return (
+        len(word_tokenize(df_row["sentence"][:df_row["sentexprStart"]])),
+        len(word_tokenize(df_row["sentence"][:df_row["sentexprEnd"]])) - 1,
+        len(word_tokenize(df_row["sentence"][:df_row["targetStart"]])),
+        len(word_tokenize(df_row["sentence"][:df_row["targetEnd"]])) - 1
+    )
 
 
 def parse_sent(sent, parser):

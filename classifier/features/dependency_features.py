@@ -126,40 +126,40 @@ class DependencyParseFeatures(AbstractFeatures):
             target_span_start(int): span start of target
             target_span_end(int): span end of target
         """
-        senti_start_i, senti_end_i, target_start_i, target_end_i = \
-            self._span2i(sentence, senti_span_start, senti_span_end, target_span_start, target_span_end)
+        # senti_start_i, senti_end_i, target_start_i, target_end_i = \
+            # self._span2i(sentence, senti_span_start, senti_span_end, target_span_start, target_span_end)
 
-        self.senti_head = self._find_head(senti_start_i, senti_end_i, self.sent_doc)
-        self.target_head = self._find_head(target_start_i, target_end_i, self.sent_doc)
+        self.senti_head = self._find_head(senti_span_start, senti_span_end, self.sent_doc)
+        self.target_head = self._find_head(target_span_start, target_span_end, self.sent_doc)
 
-    def _span2i(self, sentence, senti_span_start, senti_span_end, target_span_start, target_span_end):
-        """Convert the character level spans to token level indices.
+    # def _span2i(self, sentence, senti_span_start, senti_span_end, target_span_start, target_span_end):
+        # """Convert the character level spans to token level indices.
 
-        Args:
-            sentence(str): sentence which includes the sentiment expression and
-                target
-            sent_span_start(int): span start of sentiment expression
-            sent_span_end(int): span end of sentiment expression
-            target_span_start(int): span start of target
-            target_span_end(int): span end of target
+        # Args:
+            # sentence(str): sentence which includes the sentiment expression and
+                # target
+            # sent_span_start(int): span start of sentiment expression
+            # sent_span_end(int): span end of sentiment expression
+            # target_span_start(int): span start of target
+            # target_span_end(int): span end of target
 
-        Returns:
-            senti_start_i(int): starting token index of the sentiment
-                expression in the sentence
-            senti_end_i(int): ending token index of the sentiment expression in
-                the sentence
-            target_start_i(int): starting token index of the target in the
-                sentence
-            target_end_i(int): ending token index of the target in the sentence
-        """
-        sent_ex = [token.text for token in self.nlp(sentence[senti_span_start:senti_span_end])]
-        target = [token.text for token in self.nlp(sentence[target_span_start:target_span_end])]
+        # Returns:
+            # senti_start_i(int): starting token index of the sentiment
+                # expression in the sentence
+            # senti_end_i(int): ending token index of the sentiment expression in
+                # the sentence
+            # target_start_i(int): starting token index of the target in the
+                # sentence
+            # target_end_i(int): ending token index of the target in the sentence
+        # """
+        # sent_ex = [token.text for token in self.nlp(sentence[senti_span_start:senti_span_end])]
+        # target = [token.text for token in self.nlp(sentence[target_span_start:target_span_end])]
 
-        # find the start and end indices of sentiment expr. and target respectively
-        senti_start_i, senti_end_i = self._find_token_i(sent_ex, self.sent_doc)
-        target_start_i, target_end_i = self._find_token_i(target, self.sent_doc)
+        # # find the start and end indices of sentiment expr. and target respectively
+        # senti_start_i, senti_end_i = self._find_token_i(sent_ex, self.sent_doc)
+        # target_start_i, target_end_i = self._find_token_i(target, self.sent_doc)
 
-        return senti_start_i, senti_end_i, target_start_i, target_end_i
+        # return senti_start_i, senti_end_i, target_start_i, target_end_i
 
     def _find_token_i(self, phrase, sent_doc):
         """

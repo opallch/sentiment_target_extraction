@@ -15,11 +15,11 @@ from .feature_utils import parse_sent
 
 class FeatureVectorCreator:
 
-    def __init__(self, in_file_pkl:str, out_file_pkl:str):
+    def __init__(self, filename_in:str, filename_out:str):
         """Constructor of FeatureVectorCreator.
 
         Args:
-            in_file_pkl(str): filename of the `.pkl` file storing the DataFrame from Corpus Reader
+            file_in(str): filename of the `.pkl` or `.csv` file storing the DataFrame from Corpus Reader
             out_file_pkl(str): filename of the `.pkl` file in which the features vectors will be stored
 
         Attributes:
@@ -28,12 +28,18 @@ class FeatureVectorCreator:
             self.out_file_pkl(str): 
             self.list_of_vecs(list): list of feature vectors 
         """
-        self._df_corpus_reader = pd.read_pickle(in_file_pkl)
+        self._df_corpus_reader = self._load_df(filename_in)
         self._features_classes = [ConstituencyParseFeatures(self._trees()),
                                   DependencyParseFeatures()]
-        self._out_file_pkl = out_file_pkl
+        self._filename_out = filename_out
         self._list_of_vecs = []
 
+    def _load_df(self, filename:str):
+        if filename.endswith('pkl'):
+            return pd.read_pickle(filename)
+        elif filename.endswith('csv'):
+            return pd.read_csv(filename)
+    
     def get_vectors(self) -> None:
         """Wrapper function for handling the feature vectors.
 
@@ -79,10 +85,13 @@ class FeatureVectorCreator:
 
     def _write_vectors_to_file(self) -> None:
         """Write self.df_vectors to the ouput `.pkl` file."""
-        pd.to_pickle(
+        if self._filename_out.endswith('pkl'):
+            pd.to_pickle(
             self._list_of_vecs2df(),
-            self._out_file_pkl
+            self._filename_out
         )
+        elif self._filename_out.endswith('csv'):
+            self._list_of_vecs2df().to_csv(self._filename_out)
 
     def _list_of_vecs2df(self) -> pd.DataFrame:
         """Turn `self._list_of_vecs` into a dataframe."""

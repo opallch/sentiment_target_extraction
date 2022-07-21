@@ -6,9 +6,11 @@ All features vectors will be stored as a DataFrame, which will be written into a
 
 import numpy as np
 import pandas as pd
+from benepar import Parser
 
 from .constituency_features import ConstituencyParseFeatures
 from .dependency_features import DependencyParseFeatures
+from .feature_utils import parse_sent
 
 
 class FeatureVectorCreator:
@@ -26,8 +28,9 @@ class FeatureVectorCreator:
             self.out_file_pkl(str): 
             self.list_of_vecs(list): list of feature vectors 
         """
-        self._features_classes = [DependencyParseFeatures()] #[ConstituencyParseFeatures(), DependencyParseFeatures()]
         self._df_corpus_reader = pd.read_pickle(in_file_pkl)
+        self._features_classes = [ConstituencyParseFeatures(self._trees()),
+                                  DependencyParseFeatures()]
         self._out_file_pkl = out_file_pkl
         self._list_of_vecs = []
 
@@ -41,26 +44,37 @@ class FeatureVectorCreator:
         """
         self._all_features_for_all_instances()
         self._write_vectors_to_file()
-    
+
     def _all_features_for_all_instances(self) -> None:
         """Append the instance features lists to self._list_of_vecs."""
-        for i in range (0, len(self._df_corpus_reader)):
-            self._append_vector_to_list(
-                self._all_features_for_each_instance(
-                    self._df_corpus_reader.iloc[i]
-                )
-            )
+        # for i in range (0, len(self._df_corpus_reader)):
+            # self._append_vector_to_list(
+                # self._all_features_for_each_instance(
+                    # self._df_corpus_reader.iloc[i]
+                # )
+            # )
+        self._df_corpus_reader.apply(
+            lambda x: self._append_vector_to_list(
+                self._all_features_for_each_instance(x),
+            ),
+            axis=1
+        )
 
     def _append_vector_to_list(self, features_vec:list) -> list:
         """Append the features lists for an instance to `self._list_of_vecs`"""
-        self._list_of_vecs.append(features_vec)
+        if features_vec is not None:
+            self._list_of_vecs.append(features_vec)
 
     def _all_features_for_each_instance(self, df_row:pd.Series) -> list:
         """Combine all features vectors from different feature classes."""
         all_vectors = []
         # collect vectors
         for features_class in self._features_classes:
-            all_vectors.append(features_class.get_features(df_row))
+            features = features_class.get_features(df_row)
+            if features is not None:
+                all_vectors.append(features)
+            else:
+                return None
         return [f for vec in all_vectors for f in vec]
 
     def _write_vectors_to_file(self) -> None:
@@ -73,6 +87,15 @@ class FeatureVectorCreator:
     def _list_of_vecs2df(self) -> pd.DataFrame:
         """Turn `self._list_of_vecs` into a dataframe."""
         return pd.DataFrame(np.array(self._list_of_vecs))
+
+    def _trees(self):
+        """Parse all sentences once to avoid double parsing."""
+        parser = Parser("benepar_en3")
+        trees = {}
+        for sent in self._df_corpus_reader["sentence"].unique():
+            if sent not in trees:
+                trees[sent] = parse_sent(sent, parser)
+        return trees
 
 
 if __name__ == "__main__":

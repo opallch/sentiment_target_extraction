@@ -11,7 +11,10 @@ from .abstract_features import AbstractFeatures
 
 class ConstituencyParseFeatures(AbstractFeatures):
 
-    def get_features(self, df_row, tree):
+    def __init__(self, trees):
+        self._trees = trees
+
+    def get_features(self, df_row):
         """Return vector of feature values.
 
         Features:
@@ -23,6 +26,7 @@ class ConstituencyParseFeatures(AbstractFeatures):
                 word level spans of the target (candidate) and senti expression
             tree (IndexableSpannotatableParentedTree): could probably be easier
         """
+        tree = self._trees[df_row["sentence"]]
         target_tree = get_subtree_by_span(tree,
                                           df_row["targetStart"],
                                           df_row["targetEnd"])

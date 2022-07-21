@@ -1,5 +1,11 @@
+# -*- coding: utf-8 -*-
+"""
+Some helpful classes, functions and lists.
+"""
+
 from nltk.tree import ParentedTree, Tree
 from nltk.tokenize import word_tokenize
+
 
 DEP_TAGS = [
     "acl",
@@ -74,7 +80,6 @@ DEP_TAGS = [
     "vocative",
     "xcomp"
     ]
-
 FINE_GRAINED_POS_TAGS = [
     ".",
     ",",
@@ -133,7 +138,7 @@ FINE_GRAINED_POS_TAGS = [
     "HVS",
     "_SP",
     ]
-
+ 
 POS_TAGS = ["NP", "VP", "PP", "S", "TOP", "NML", "ADJP", "SBAR", "WHNP", "PRN",
             "PRT", "NNP", "NN", "DT", "VBN", "NNS", "PRP", "VBD", "VBG", "VB",
             "FW", "VBP", "SINV", "SQ", "PRP$", "NNPS", "JJ", "VBZ", "RB", "VBZ"]

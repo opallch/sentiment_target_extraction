@@ -3,11 +3,12 @@
 Class creating features vectors for all instances from the corpus, which has been preprocessed by `corpus_reader.py`.
 All features vectors will be stored as a DataFrame, which will be written into a file. 
 """
+
 import numpy as np
 import pandas as pd
 
-from constituency_features import ConstituencyParseFeatures
-from dependency_features import DependencyParseFeatures
+from .constituency_features import ConstituencyParseFeatures
+from .dependency_features import DependencyParseFeatures
 
 
 class FeatureVectorCreator:

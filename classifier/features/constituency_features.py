@@ -29,7 +29,7 @@ class ConstituencyParseFeatures(AbstractFeatures):
         tree = self._trees[df_row["sentence"]]
         target_tree = get_subtree_by_span(tree,
                                           df_row["targetStart"],
-                                          df_row["targetEnd"])
+                                          df_row["targetEnd"] - 1)
         if target_tree is not None:
             # one hot encode tree labels
             enc = OneHotEncoder(handle_unknown="ignore")
@@ -46,10 +46,10 @@ class ConstituencyParseFeatures(AbstractFeatures):
         """Find phrase that connects target to sentiment expression."""
         trees = tree.subtrees(
             filter=lambda x: all([
-                row["targetStart"] in range(x.span_start(), x.span_end() + 1),
-                row["targetEnd"] in range(x.span_start(), x.span_end() + 1),
-                (row["sentexprStart"] in range(x.span_start(), x.span_end() + 1) or \
-                 row["sentexprEnd"] in range(x.span_start(), x.span_end() + 1))
+                row["targetStart"] in range(x.span_start(), x.span_end()),
+                row["targetEnd"] in range(x.span_start(), x.span_end()),
+                (row["sentexprStart"] in range(x.span_start(), x.span_end()) or \
+                 row["sentexprEnd"] in range(x.span_start(), x.span_end()))
             ])
         )
         trees = list(trees)

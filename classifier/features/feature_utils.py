@@ -223,9 +223,9 @@ def get_subtree_by_span(tree, span_start, span_end):
 def transform_spans(df_row):
     return (
         len(word_tokenize(df_row["sentence"][:df_row["sentexprStart"]])),
-        len(word_tokenize(df_row["sentence"][:df_row["sentexprEnd"]])) - 1,
+        len(word_tokenize(df_row["sentence"][:df_row["sentexprEnd"]])),
         len(word_tokenize(df_row["sentence"][:df_row["targetStart"]])),
-        len(word_tokenize(df_row["sentence"][:df_row["targetEnd"]])) - 1
+        len(word_tokenize(df_row["sentence"][:df_row["targetEnd"]]))
     )
 
 

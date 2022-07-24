@@ -7,17 +7,24 @@ import pandas as pd
 
 class ProdigyCorpusReader:
     
-    def __init__(self, anno_dir_path):
+    def __init__(self, prodigy_anns_root):
         """Constructor of the ProdigyCorpusReader class.
 
         Args:
-            anno_dir_path (str): path of the directory containing the xml
-                annotation files created with GATE
+            prodigy_anns_root (str): path of the directory containing the jsonl
+                annotation files created with Prodigy
 
         Attributes:
             self.items: pd.DataFrame with sentiment items
         """
-        self.items_df = self. _all_jsonls_to_df(anno_dir_path)
+        self.anns_files = self._find_all_anns_files(prodigy_anns_root)
+        self.items_df = self. _all_jsonls_to_df()
+    
+    def _find_all_anns_files(self, prodigy_anns_root):
+        return [os.path.join(root, filename)
+                for root, _, filenames in os.walk(prodigy_anns_root) 
+                for filename in filenames if filename.endswith(".jsonl") 
+                ]
     
     def items_df_to_csv(self, f_out:str):
         """writes the annotation items dataframe into a csv file."""
@@ -26,13 +33,21 @@ class ProdigyCorpusReader:
         else:
             raise Exception('please pass a csv filename!')
     
-    def _all_jsonls_to_df(self, anno_dir_path):
+    def _all_jsonls_to_df(self):
         """returns a annotation items dataframe for all jsonl files in the given directory."""
         items_df = pd.DataFrame(columns=["sentence",
                                       "sentexprStart",
                                       "sentexprEnd",
                                       "targetStart",
                                       "targetEnd"])
+        
+        for jsonl_file in self.anns_files:
+            items_df = pd.concat([items_df, 
+                                self._jsonl_to_tmp_df(jsonl_file)],
+                                ignore_index=True
+                                )
+        
+        return items_df
         
     def _jsonl_to_tmp_df(self, jsonl) -> pd.DataFrame:
         """returns a temporary annotation items dataframe for one single jsonl file."""
@@ -44,7 +59,13 @@ class ProdigyCorpusReader:
                     [row for row in self._jsonl_str_to_rows(line)]
                     )
         
-        return pd.DataFrame(tmp_rows)
+        return pd.DataFrame(tmp_rows,
+                            columns=["sentence",
+                                      "sentexprStart",
+                                      "sentexprEnd",
+                                      "targetStart",
+                                      "targetEnd"]
+                            )
 
     def _jsonl_str_to_rows(self, line) -> list:
         """converts a line in jsonl file to a list of annotation items."""
@@ -63,7 +84,6 @@ class ProdigyCorpusReader:
         return tmp_rows
 
 if __name__ == "__main__":
-    reader = ProdigyCorpusReader('anno_files/')
-    test_jsonl = '../test_files/ner_rels.jsonl'
-    df = reader._jsonl_to_tmp_df(test_jsonl)
+    reader = ProdigyCorpusReader('../test_files/')
+    df = reader._all_jsonls_to_df()
     print(df.head(10))

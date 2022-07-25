@@ -5,6 +5,7 @@ import os
 
 #from classifier.features.create_feature_vectors import FeatureVectorCreator
 from corpus_reader.corpus_reader_GATE import GATECorpusReader
+from corpus_reader.corpus_reader_prodigy import ProdigyCorpusReader
 
 
 # ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -20,12 +21,17 @@ from corpus_reader.corpus_reader_GATE import GATECorpusReader
 # print(df.columns)
 # print(df[240].value_counts())
 
-print("hi")
+# Test for Gate Reader
 
-anno_dir_path = "mpqa_corpus/gate_anns"
-text_dir_path = "mpqa_corpus/docs"
-corpus_reader = GATECorpusReader(anno_dir_path, text_dir_path)
-corpus_reader.items.to_pickle("./test_files/items_neu.pkl")
+gate_anno_dir_path = "mpqa_corpus/gate_anns"
+gate_text_dir_path = "mpqa_corpus/docs"
+gate_corpus_reader = GATECorpusReader(gate_anno_dir_path, gate_text_dir_path)
+gate_corpus_reader.items.to_pickle("./test_files/items_neu.pkl")
+print(gate_corpus_reader.items)
 
-print(corpus_reader.items)
+# Test for Prodigy Reader
+prodigy_anno_dir_path = "./unsc_corpus" 
+prodigy_corpus_reader = ProdigyCorpusReader(prodigy_anno_dir_path)
+prodigy_corpus_reader.items_df_to_csv("./test_files/test_prodigy.csv")
+
 

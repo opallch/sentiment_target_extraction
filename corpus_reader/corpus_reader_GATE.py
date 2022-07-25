@@ -79,15 +79,13 @@ class CorpusReader:
                                       "sentexprStart",
                                       "sentexprEnd",
                                       "targetStart",
-                                      "targetEnd",
-                                      "sentiment",
-                                      "intensity"])
+                                      "targetEnd"])
         for xml_file, text_file in self.annotations:
             try:
                 # concatenate data frame so far with new one for current file
                 items = pd.concat(
                     [items, self.create_items_for_file(xml_file, text_file)],
-                    ignore_index=True
+                     ignore_index=True
                 )
             except AttributeError:
                 print(f"File {xml_file} skipped due to issue with annotation")
@@ -136,12 +134,10 @@ class CorpusReader:
         # return empty df with right columns to avoid concatenation problems
         if not sentexpr_df.empty:
             sentexpr_df.columns = ["sentence", "sentexprStart", "sentexprEnd",
-                                   "targetStart", "targetEnd", "sentiment",
-                                   "intensity"]
+                                   "targetStart", "targetEnd"]
             return sentexpr_df
         return pd.DataFrame(columns=["sentence", "sentexprStart", "sentexprEnd",
-                                     "targetStart", "targetEnd", "sentiment",
-                                     "intensity"])
+                                     "targetStart", "targetEnd"])
 
     def _add_linked_information(self, attitude, sent_df, target_df):
         """Collect the linked information for each sentiment expression.
@@ -175,15 +171,13 @@ class CorpusReader:
             target_end = target_end[0]
         # target not within sentence
         if (target_start < 0) or (sent["EndNode"] - sent["StartNode"] < target_end):
-            return [np.nan]*7
+            return [np.nan]*5
         return [
             sent["Text"],
             attitude["StartNode"] - sent["StartNode"],
             attitude["EndNode"] - sent["StartNode"],
             target_start,
-            target_end,
-            attitude["Sentiment"],
-            attitude["Intensity"]
+            target_end
         ]
 
     @staticmethod
@@ -199,22 +193,17 @@ class CorpusReader:
         sentexpr_df, ann_features = self._get_annos_per_type(
             df, anns, df["Type"] == "attitude"
         )
-        idx = []
-        intensity, sentiment, link = [], [], []
+        idx, link = [], []
         for feature_obj in ann_features:
             feature_dict = self._get_feature_dict(feature_obj)
             # add features to df - maybe this can be done with apply - i'll check
             if feature_dict.get("attitude-type") in self.SENTEXPR:
                 idx.append(True)
                 link.append(feature_dict["targetFrame-link"])
-                intensity.append(feature_dict["intensity"])
-                sentiment.append(feature_dict["attitude-type"].split("-")[-1])
             elif "attitude-type" in feature_dict:
                 idx.append(False)
         # add to df
         sentexpr_df = sentexpr_df[idx]
-        sentexpr_df.loc[:,"Sentiment"] = sentiment
-        sentexpr_df.loc[:,"Intensity"] = intensity
         # add target links
         links = [targetframe_df.loc[i]["TargetLink"]
                  if i in targetframe_df.index else None for i in link]
@@ -283,31 +272,19 @@ if __name__ == "__main__":
     anno_dir_path = "mpqa_corpus/gate_anns"
     text_dir_path = "mpqa_corpus/docs"
     corpus_reader = CorpusReader(anno_dir_path, text_dir_path)
-    #print(corpus_reader.items)
-    corpus_reader.items.to_pickle("./test_files/items.pkl") # or json?
-    # pd.read_pickle("./test_files/items.pkl") to load
+    corpus_reader.items.to_pickle("./test_files/items.pkl")
 
-    with open ("./test_files/items", "w") as f_out:
+    with open("./test_files/items", "w") as f_out:
         for idx in range(0, len(corpus_reader.items)):
             i = corpus_reader.items.iloc[idx]
             print(idx, file=f_out)
             print(i.sentence, file=f_out)
             f_out.write("{} {} {} {}\nSENTI: {}\nTARGET: {}\n\n".format(
-                i.sentexprStart, 
-                i.sentexprEnd, 
-                i.targetStart, 
-                i.targetEnd,
-                i.sentence[i.sentexprStart:i.sentexprEnd],
-                i.sentence[i.targetStart:i.targetEnd]
+                    i.sentexprStart, 
+                    i.sentexprEnd, 
+                    i.targetStart, 
+                    i.targetEnd,
+                    i.sentence[i.sentexprStart:i.sentexprEnd],
+                    i.sentence[i.targetStart:i.targetEnd]
                 )
             )
-    
-    #i = corpus_reader.items.iloc[8]
-    
-    # print(i)
-    # print('.......................................................')
-    # print(i.sentence)
-    # print()
-    # print(i.sentexprStart, i.sentexprEnd, i.targetStart, i.targetEnd)
-    # print(i.sentence[i.sentexprStart:i.sentexprEnd])
-    # print(i.sentence[i.targetStart:i.targetEnd])

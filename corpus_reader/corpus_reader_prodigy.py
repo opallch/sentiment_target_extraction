@@ -80,9 +80,3 @@ class ProdigyCorpusReader:
                              rel['head_span']['start'],
                              rel['head_span']['end']])
         return tmp_rows
-
-
-if __name__ == "__main__":
-    reader = ProdigyCorpusReader('../test_files/')
-    df = reader._all_jsonls_to_df()
-    print(df.head(10))

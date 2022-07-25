@@ -132,3 +132,4 @@ dmypy.json
 mpqa_corpus/
 test_files/
 anno_files/
+unsc_corpus/

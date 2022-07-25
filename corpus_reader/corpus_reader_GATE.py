@@ -9,7 +9,7 @@ from xml.dom import minidom
 import numpy as np
 import pandas as pd
 
-class CorpusReader:
+class GATECorpusReader:
 
     SENTEXPR = {"sentiment-neg", "sentiment-pos"}
 

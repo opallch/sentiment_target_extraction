@@ -13,12 +13,10 @@ ITEMS = os.path.join(ROOT, "test_files/items_neu.pkl")
 TEST_ALL_FEATURES = os.path.join(ROOT, "test_files/test_all_features_neu.pkl")
 LABELS = os.path.join(ROOT, "test_files/neu_labels.pkl")
 
-test = pd.read_pickle(ITEMS)
-print(test)
-
 fvc = FeatureVectorCreator(ITEMS, TEST_ALL_FEATURES, LABELS)
 fvc.get_vectors()
 
+print("-"*50)
 # to check if the dataframe looks good
 df = pd.read_pickle(TEST_ALL_FEATURES)
 print(df[:10])

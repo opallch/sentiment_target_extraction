@@ -78,17 +78,26 @@ class FeatureVectorCreator:
         self._all_features_for_all_instances()
         self._write_vectors_to_file()
 
-    def _add_negative_instances(self):
+    def _add_negative_instances(self, n="all"):
         """Add negative instances for classifier training to dataframe."""
         # assign positive label to gold instances so far
         self._df_corpus_reader["label"] = 1
         # collect negative instances
-        negative_instances = self._df_corpus_reader.apply(
-            lambda x: self._add_negative_instances_to_row(x),
-            axis=1
+        negative_instances = pd.concat(
+            list(
+                self._df_corpus_reader.apply(
+                    lambda x: self._add_negative_instances_to_row(x),
+                    axis=1
+                )
+            ),
+            axis=0,
+            ignore_index=True
         )
+        # if self._undersample is True, reduce number of negative instances
+        if self._undersample and (len(self._df_corpus_reader) < len(negative_instances)):
+            negative_instances = negative_instances.sample(len(self._df_corpus_reader))
         # return dataframe with negative instances added
-        return pd.concat([self._df_corpus_reader] + list(negative_instances),
+        return pd.concat([self._df_corpus_reader, negative_instances],
                          axis=0,
                          ignore_index=True)
 
@@ -101,8 +110,6 @@ class FeatureVectorCreator:
             self._create_candidate_row(df_row, c) for c in candidates
             if not ((c.span_start() == df_row["targetStart"] - 1) and (c.span_end() == df_row["targetEnd"] - 1))
         ]
-        if self._undersample:
-            candidates = random.sample(candidates, len(self._df_corpus_reader))
         # return as dataframe
         df = pd.DataFrame(candidates, columns=df_row.index)
         return df

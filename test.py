@@ -1,75 +1,40 @@
 # -*- coding: utf-8 -*-
 import os
 
-#import pandas as pd
+import pandas as pd
 
 from classifier.features.create_feature_vectors import FeatureVectorCreator
-# from corpus_reader.corpus_reader_GATE import GATECorpusReader
-# from corpus_reader.corpus_reader_prodigy import ProdigyCorpusReader
+#from corpus_reader.corpus_reader_prodigy import ProdigyCorpusReader
+
+from model import train_classifier, classify, evaluate
 
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
-ITEMS = os.path.join(ROOT, "test_files/items_neu.pkl")
-TEST_ALL_FEATURES = os.path.join(ROOT, "test_files/test_all_features_neu.pkl")
-LABELS = os.path.join(ROOT, "test_files/neu_labels.pkl")
+TRAINING_DATA = "test_files/items_neu.pkl"
+TRAINING_LABELS = "test_files/neu_labels.pkl"
+ITEMS = "test_files/unsc_items.csv"
+INSTANCE_FILE = "test_files/unsc_instances.pkl"
+LABELS = "test_files/unsc_labels.pkl"
 
-fvc = FeatureVectorCreator(ITEMS, TEST_ALL_FEATURES, LABELS)
+MODEL = "test_files/mpqa_model.pkl"
+TEST_MPQA_INSTANCES = "test_files/instances_mpqa_test.pkl"
+TEST_MPQA_LABELS = "test_files/label_mpqa_test.pkl"
+
+fvc = FeatureVectorCreator(ITEMS, INSTANCE_FILE, LABELS)
 fvc.get_vectors()
 
-print("-"*50)
-# to check if the dataframe looks good
-df = pd.read_pickle(TEST_ALL_FEATURES)
-print(df[:10])
-print(df.columns)
-print(df[240].value_counts())
+X_train = pd.read_pickle(TRAINING_DATA)
+y_train = pd.read_pickle(TRAINING_LABELS)
 
-labels = pd.read_pickle(LABELS)
+clf = train_classifier(X_train, y_train, filename=MODEL, test_filename="test_files/mpqa_test.pkl")
 
-print(labels)
+mpqa_gold = pd.read_pickle(TEST_MPQA_LABELS)
+unsc_gold = pd.read_pickle(LABELS)
 
-# Test for Gate Reader
+mpqa_pred = classify(TEST_MPQA_INSTANCES, clf)
+unsc_pred = classify(INSTANCE_FILE, clf)
 
-# gate_anno_dir_path = "mpqa_corpus/gate_anns"
-# gate_text_dir_path = "mpqa_corpus/docs"
-# gate_corpus_reader = GATECorpusReader(gate_anno_dir_path, gate_text_dir_path)
-# gate_corpus_reader.items.to_pickle("./test_files/items_neu.pkl")
-# print(gate_corpus_reader.items)
-
-# Test for Prodigy Reader
-# prodigy_anno_dir_path = "./unsc_corpus" 
-# prodigy_corpus_reader = ProdigyCorpusReader(prodigy_anno_dir_path)
-# prodigy_corpus_reader.items_df_to_csv("./test_files/test_prodigy.csv")
-
-
-
-=======
-#from classifier.features.create_feature_vectors import FeatureVectorCreator
-from corpus_reader.corpus_reader_GATE import GATECorpusReader
-from corpus_reader.corpus_reader_prodigy import ProdigyCorpusReader
-
-
-# ROOT = os.path.dirname(os.path.abspath(__file__))
-# ITEMS = os.path.join(ROOT, "test_files/items.pkl")
-# TEST_ALL_FEATURES = os.path.join(ROOT, "test_files/test_all_features.pkl")
-
-# fvc = FeatureVectorCreator(ITEMS, TEST_ALL_FEATURES)
-# fvc.get_vectors()
-
-# # to check if the dataframe looks good
-# df = pd.read_pickle(TEST_ALL_FEATURES)
-# print(df[:10])
-# print(df.columns)
-# print(df[240].value_counts())
-
-# Test for Gate Reader
-
-gate_anno_dir_path = "mpqa_corpus/gate_anns"
-gate_text_dir_path = "mpqa_corpus/docs"
-gate_corpus_reader = GATECorpusReader(gate_anno_dir_path, gate_text_dir_path)
-gate_corpus_reader.items.to_pickle("./test_files/items_neu.pkl")
-print(gate_corpus_reader.items)
-
-# Test for Prodigy Reader
-prodigy_anno_dir_path = "./unsc_corpus" 
-prodigy_corpus_reader = ProdigyCorpusReader(prodigy_anno_dir_path)
-prodigy_corpus_reader.items_df_to_csv("./test_files/test_prodigy.csv")
+print("------------------------------------------------------------------")
+print("Testing on MPQA test data:")
+evaluate(mpqa_gold, mpqa_pred)
+print("Testing on UNSC test data:")
+evaluate(unsc_gold, unsc_pred)

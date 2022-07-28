@@ -52,6 +52,7 @@ class FeatureVectorCreator:
                                   DependencyParseFeatures()]
         self._filename_out = filename_out
         self._list_of_vecs = []
+        self._labels = []
 
     def _load_df(self, filename:str):
         if filename.endswith("pkl"):
@@ -132,14 +133,16 @@ class FeatureVectorCreator:
         self._df_corpus_reader.progress_apply(
             lambda x: self._append_vector_to_list(
                 self._all_features_for_each_instance(x),
+                x["label"]
             ),
             axis=1
         )
 
-    def _append_vector_to_list(self, features_vec:list) -> list:
+    def _append_vector_to_list(self, features_vec:list, label) -> list:
         """Append the features lists for an instance to `self._list_of_vecs`"""
         if features_vec is not None:
             self._list_of_vecs.append(features_vec)
+            self._labels.append(label)
 
     def _all_features_for_each_instance(self, df_row:pd.Series) -> list:
         """Combine all features vectors from different feature classes."""
@@ -157,27 +160,28 @@ class FeatureVectorCreator:
         """Save labels in .pkl or .csv file."""
         if self._label_filename.endswith("pkl"):
             pd.to_pickle(
-                self._df_corpus_reader["label"],
+                self._labels,
                 self._label_filename
             )
         elif self._label_filename.endswith("csv"):
-            self._df_corpus_reader["label"].to_csv(self._filename_out, encoding="utf-8")
+            self._labels.to_csv(self._filename_out, encoding="utf-8")
         else:
             raise InvalidFilenameError("Label file must be .csv or .pkl")
 
     def _write_vectors_to_file(self) -> None:
         """Write self.df_vectors to the ouput `.pkl` file."""
+        df = self._list_of_vecs2df()
         # if labels are to be saved:
         if self._label_filename:
             self._write_labels_to_file()
         # save feature vectors
         if self._filename_out.endswith("pkl"):
             pd.to_pickle(
-            self._list_of_vecs2df(),
-            self._filename_out
-        )
+                df,
+                self._filename_out
+            )
         elif self._filename_out.endswith("csv"):
-            self._list_of_vecs2df().to_csv(self._filename_out, encoding="utf-8")
+            df.to_csv(self._filename_out, encoding="utf-8")
         else:
             raise InvalidFilenameError("Output file must be .csv or .pkl")
 

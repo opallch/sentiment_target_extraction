@@ -2,11 +2,10 @@
 """
 Reader for prodigy annotated files.
 """
-
+import argparse
 import os
 import json
 
-import numpy as np
 import pandas as pd
 
 
@@ -80,3 +79,12 @@ class ProdigyCorpusReader:
                              rel['head_span']['start'],
                              rel['head_span']['end']])
         return tmp_rows
+
+if __name__ == "__main__":
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("-a", "--anno_root", help="root directory of the annotation jsonl files") # ../data/unsc_prodigy/
+    arg_parser.add_argument("-o", "--csv_path", help="path of csv file to which the annotation dataframe should be written") # ../output/unsc.csv
+    args = arg_parser.parse_args()
+    
+    reader = ProdigyCorpusReader(args.anno_root)
+    reader.items_df_to_csv(args.csv_path)

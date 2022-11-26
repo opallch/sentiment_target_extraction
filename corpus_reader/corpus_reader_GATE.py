@@ -3,6 +3,7 @@
 Reader class for the MPQA corpus extracting sentiment expressions as well as 
 their corresponding targets and the sentences they are in.
 """
+import argparse
 import os
 from xml.dom import minidom
 
@@ -269,22 +270,28 @@ class GATECorpusReader:
 
 
 if __name__ == "__main__":
-    anno_dir_path = "mpqa_corpus/gate_anns"
-    text_dir_path = "mpqa_corpus/docs"
-    corpus_reader = CorpusReader(anno_dir_path, text_dir_path)
-    corpus_reader.items.to_pickle("./test_files/items.pkl")
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("-a", "--anno_root", help="root directory of the annotation xml files") # ../data/mpqa3.0_corpus/gate_anns
+    arg_parser.add_argument("-rt", "--raw_text_root", help="root directory of the raw text files") # ../data/mpqa3.0_corpus/docs
+    arg_parser.add_argument("-o", "--csv_path", help="path of csv file to which the annotation dataframe should be written") # ../output/mpqa.csv
+    args = arg_parser.parse_args()
 
-    with open("./test_files/items", "w") as f_out:
-        for idx in range(0, len(corpus_reader.items)):
-            i = corpus_reader.items.iloc[idx]
-            print(idx, file=f_out)
-            print(i.sentence, file=f_out)
-            f_out.write("{} {} {} {}\nSENTI: {}\nTARGET: {}\n\n".format(
-                    i.sentexprStart, 
-                    i.sentexprEnd, 
-                    i.targetStart, 
-                    i.targetEnd,
-                    i.sentence[i.sentexprStart:i.sentexprEnd],
-                    i.sentence[i.targetStart:i.targetEnd]
-                )
-            )
+    corpus_reader = GATECorpusReader(args.anno_root, args.raw_text_root)
+    corpus_reader.items.to_csv(args.csv_path)
+
+    # with open(args.csv_path, "w") as f_out:
+    #     for idx in range(0, len(corpus_reader.items)):
+    #         i = corpus_reader.items.iloc[idx]
+    #         #print(idx, file=f_out)
+    #         #print(i.sentence, file=f_out)
+    #         f_out.write("{},{},{},{},{},{}".format(
+    #                 i,
+    #                 i.sentence,
+    #                 i.sentexprStart, 
+    #                 i.sentexprEnd, 
+    #                 i.targetStart, 
+    #                 i.targetEnd,
+    #                 #i.sentence[i.sentexprStart:i.sentexprEnd],
+    #                 #i.sentence[i.targetStart:i.targetEnd]
+    #             )
+    #         )

@@ -133,3 +133,5 @@ mpqa_corpus/
 test_files/
 anno_files/
 unsc_corpus/
+data/
+output/

@@ -2,6 +2,11 @@
 """
 Class for generating features related to dependency parsing by using get_features(),
 which needs the information from a row (pandas.Series) from the corpus reader DataFrame.
+Features implemented:
+1. Relation between the two heads
+2. POS-tag of the sentiment head
+3. POS-tag of the target head
+4. Distance between the two heads
 """
 import pandas as pd
 import spacy

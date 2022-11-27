@@ -1,30 +1,27 @@
 # -*- coding: utf-8 -*-
 """
-Class for generating features related to constituency parsing
+Class for generating features related to constituency parsing.
+Features implemented:
+1. Tree label of the target
+2. Label of the lowest common ancestor of the target and the sentiment expression
 """
-
 from sklearn.preprocessing import OneHotEncoder
 
 from .feature_utils import get_subtree_by_span, POS_TAGS
 from .abstract_features import AbstractFeatures
 
 
-class ConstituencyParseFeatures(AbstractFeatures):
+class ConstituencyParesFeatures(AbstractFeatures):
 
     def __init__(self, trees):
-        self._trees = trees
+        self._trees = trees 
 
     def get_features(self, df_row):
         """Return vector of feature values.
 
-        Features:
-            - target tree label
-            - label of lowest common ancestor of target and senti expression
-
         Args:
             df_row (pd.Series): instance as pd.Series containing at least the
                 word level spans of the target (candidate) and senti expression
-            tree (IndexableSpannotatableParentedTree): could probably be easier
         """
         tree = self._trees[df_row["sentence"]]
         target_tree = get_subtree_by_span(tree,
@@ -54,5 +51,5 @@ class ConstituencyParseFeatures(AbstractFeatures):
         )
         trees = list(trees)
         if trees:
-            return trees[-1]  # last tree in list is lowest common node
+            return trees[-1]  # last tree in list is the lowest common node
         return None

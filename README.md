@@ -9,16 +9,22 @@ The corpus readers in `corpus_reader/` create a panda DataFrame for the sentence
 |--|-----|-----|-----|-----|-----|
 |0|"The President: I should like to inform the Council that I have received a letter from the representative of Georgia, in which he requests to be invited to participate in the discussion of the item on the Council's agenda."|17|28|32|220|
 
-`corpus_reader_GATE.py` processes the `xml`-files produced by GATE for the MPQA corpus and `corpus_reader_prodigy.py` the `jsonl`-files produced by prodigy for the UNSC corpus. Feel free to use them if your annotations conform to one of these formats. The following shows their usage:
+`corpus_reader_GATE.py` processes the `xml`-files produced by GATE for the MPQA corpus and `corpus_reader_prodigy.py` the `jsonl`-files produced by prodigy for the UNSC corpus. Feel free to use them if your annotations conform to one of these formats. You may use it in two ways:
+1. via command line:
 
 ```bash
 python3 corpus_reader_prodigy.py -a path/to/annotation/jsonl/files/root/ -o path/to/csv/file
 python3 corpus_reader_GATE.py -a path/to/annotation/xml/files/root/ -rt path/to/raw/texts/root/ -o path/to/csv/file
 ```
+2. directly create the Corpus Reader object and use its `items_df_to_csv()` method in the script.
+
+## Feature Engineering
+Please refer to the README in `classifier/features/`.
 
 ## Training
-
+`classifier/`, `creating_training_data.py`,  `model.py`
+[//]: # (should we relocate tree_utils?)
 
 ## Evaluation
-
-[//]: # (should we relocate tree_utils?)
+`eval.py`
+[//]: # (majority baseline?)

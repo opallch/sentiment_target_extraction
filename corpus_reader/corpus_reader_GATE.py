@@ -268,6 +268,13 @@ class GATECorpusReader:
         ann_features = [ann.getElementsByTagName('Feature') for ann in anns]
         return label_df, ann_features
 
+    def items_df_to_csv(self, f_out:str):
+        """Write the annotation items dataframe into a csv file."""
+        if f_out.endswith('.csv'):
+            self.items.to_csv(f_out)
+        else:
+            raise Exception('please pass a csv filename!')
+
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
@@ -277,7 +284,7 @@ if __name__ == "__main__":
     args = arg_parser.parse_args()
 
     corpus_reader = GATECorpusReader(args.anno_root, args.raw_text_root)
-    corpus_reader.items.to_csv(args.csv_path)
+    corpus_reader.items_df_to_csv(args.csv_path)
 
     # with open(args.csv_path, "w") as f_out:
     #     for idx in range(0, len(corpus_reader.items)):

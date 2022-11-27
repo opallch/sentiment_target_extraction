@@ -86,5 +86,5 @@ if __name__ == "__main__":
     arg_parser.add_argument("-o", "--csv_path", help="path of csv file to which the annotation dataframe should be written") # ../output/unsc.csv
     args = arg_parser.parse_args()
     
-    reader = ProdigyCorpusReader(args.anno_root)
-    reader.items_df_to_csv(args.csv_path)
+    corpus_reader = ProdigyCorpusReader(args.anno_root)
+    corpus_reader.items_df_to_csv(args.csv_path)

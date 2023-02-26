@@ -8,12 +8,17 @@ Features implemented:
 3. POS-tag of the target head
 4. Distance between the two heads
 """
+import os
+
 import pandas as pd
 import spacy
 from sklearn.preprocessing import OneHotEncoder
 
 from abstract_features import AbstractFeatures
 from feature_utils import DEP_TAGS, FINE_GRAINED_POS_TAGS, lowest_common_ancestor, distance_btw_3_pts
+
+class NotATargetRelationError(Exception):
+    pass
 
 
 class SpansError(Exception):
@@ -59,27 +64,20 @@ class DependencyParseFeatures(AbstractFeatures):
             list: list of features for a row from the corpus reader dataframe.
 
         Raises:
-            SpansError: If target head and sentiment expression head cannot be
-                found in the sentence. A list of -1.0 will be returned as the
-                features vector in this case. This can be traced back to the
-                mistakes in the spans of sentiment expression and/or target
-                from the annotation.
+            SpansError: 
         """
         # preparatory calculations for creating the features
         self._preparation_for_features(df_row)
         
         # create and save features
-        try:
-            if self.senti_head is None or self.target_head is None:
-                raise SpansError
-            else:
-                self._rel_btw_heads()
-                self._pos_senti_head()
-                self._pos_target_head()
-                self._distance_btw_heads()
-        except SpansError:
-            # WARNING: hardcode the length of vector
-            self.features.extend([-1.0] * 184)
+        if self.senti_head is None or self.target_head is None:
+            raise SpansError
+        else:
+            self._rel_btw_heads()
+            self._pos_senti_head()
+            self._pos_target_head()
+            self._distance_btw_heads()
+
         return self.features
     
     def _preparation_for_features(self, df_row): 
@@ -87,7 +85,15 @@ class DependencyParseFeatures(AbstractFeatures):
         Most importantly, calculate the heads of the target/sentiment
         expression and the lowest common ancestor of these heads in the
         dependency parse.
+
+        raises:
+            NotATargetRelationError: when the start/end span of the target of
+                row is -1. This indicates that the row corresponds to a source relation
+                instead of a target relation.
         """
+        if df_row.targetStart == -1 or df_row.targetEnd == -1:
+            raise NotATargetRelationError
+
         self._reset_attributes()
         
         # generates dependency parse if it is an unparsed sentence to avoid duplicate parsing
@@ -208,23 +214,30 @@ class DependencyParseFeatures(AbstractFeatures):
             list(self.ohe_dep.transform([[self.target_head.dep_]]).toarray()[0])
         )
 
+########## For Trial ##########
 
-def test_single_instance(n, items_df, dep_feature):
+def test_single_instance(n, items_df_path, dep_feature):
+    items_df = pd.read_csv(items_df_path)
     item = items_df.iloc[n]
     print(len(dep_feature.get_features(item)))
     print("target head:", dep_feature.target_head)
     print("senti head:", dep_feature.senti_head)
 
 
-def test_write_all_instances_to_file(items_df, dep_feature):
+def test_write_all_instances_to_file(items_df_path, dep_feature):
+    items_df = pd.read_csv(items_df_path)
     with open("../output/instances/test_dependency.csv", "w") as f_out:
-        for idx in range(0,len(items_df)):
-            item = items_df.iloc[idx]
-            print(dep_feature.get_features(item), file=f_out)
+            for idx in range(0,len(items_df)):
+                try:
+                    item = items_df.iloc[idx]
+                    print(dep_feature.get_features(item), file=f_out)
+                except NotATargetRelationError:
+                    print(f'Row {idx} in {os.path.split(items_df_path)[1]} is skipped, since it is not a sentiment-expression-to-target (probably a sentiment-expression-to-source relation instead).')
+                    continue
 
 
 if __name__ == "__main__":
-    items_df = pd.read_csv("../output/UNSC_2014_SPV.7154_sentsplit.csv")
+    items_df_path = "../output/UNSC_2014_SPV.7154_sentsplit.csv"
     dep_feature = DependencyParseFeatures()
-    #test_single_instance(3, items_df, dep_feature)
-    test_write_all_instances_to_file(items_df, dep_feature)
+    # test_single_instance(3, items_df_path, dep_feature)
+    test_write_all_instances_to_file(items_df_path, dep_feature)

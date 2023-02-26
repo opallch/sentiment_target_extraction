@@ -16,18 +16,19 @@ python3 corpus_reader_GATE.py -a path/to/annotation/xml/files/root/ -rt path/to/
 
 Each line of the output dataframe represents one relation between a sentiment expression and a target/source: 
 
-| |rawTextFilename|sentexprStart|sentexprEnd|targetStart|targetEnd|SourceStart|SourceEnd|
-|--|--|-----|-----|-----|-----|-----|-----|
-|0|UNSC_2014_SPV.7154_spch004_sentsplit.txt|153|170|171|180|-1|-1|
+||rawTextFilename|sentenceID|sentence|sentexprStart|sentexprEnd|targetStart|targetEnd|sourceStart|sourceEnd|
+|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|
+|0|UNSC_2014_SPV.7154_spch004_sentsplit.txt|36|Mr. Churkin (Russian Federation) (spoke in Russian): The Russian Federation has called for this emergency meeting of the Security Council because of the serious dangerous evolution of the situation in south-eastern Ukraine.|153|170|171|180|-1|-1|
 
--1 in this example indicates that it is not a relation to a source, but to a target; vice versa. 
+-1 in this example indicates that it is not a relation to a source, but to a target; vice versa. `sentenceID` is the id of the corresponding sentence in the annotation file.
 
 ### Annotation Files with GATE or Prodigy
 Both the [MPQA corpus](https://mpqa.cs.pitt.edu/corpora/mpqa_corpus/) and the [UNSC corpus](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/KGVSYH) are used as the data source for the project. Since the MPQA corpus is an opinion corpus, it already comes with annotations related to sentiment analysis i.e. with the annotations of sentiment expressions and their corresponding targets (in character span), which was done by using [GATE](http://mpqa.cs.pitt.edu/annotation/). Meanwhile, as only raw texts are available for the the UNSC corpus, we have conducted the annotation (also in character span, on sentence level) with [Prodigy](https://prodi.gy/). 
 
 The corpus readers in `corpus_reader/` create a panda DataFrame for the sentence-level annotations and stores it in the `csv` format. The format looks like:
-||sentence|sentexprStart|sentexprEnd|targetStart|targetEnd|
-|--|-----|-----|-----|
+
+| |sentence|sentexprStart|sentexprEnd|targetStart|targetEnd|
+|---|---|---|---|---|---|
 |0|"The President: I should like to inform the Council that I have received a letter from the representative of Georgia, in which he requests to be invited to participate in the discussion of the item on the Council's agenda."|17|28|32|220|
 
 `corpus_reader_GATE.py` processes the `xml`-files produced by GATE for the MPQA corpus and `corpus_reader_prodigy.py` the `jsonl`-files produced by prodigy for the UNSC corpus. Feel free to use them if your annotations conform to one of these formats. You may use it in two ways:
@@ -41,7 +42,7 @@ python3 corpus_reader_GATE.py -a path/to/annotation/xml/files/root/ -rt path/to/
 
 
 ## Feature Engineering
-Please refer to the README in `classifier/features/`.
+Please refer to the README in `features/`.
 
 ## Training
 `classifier/`, `creating_training_data.py`,  `model.py`

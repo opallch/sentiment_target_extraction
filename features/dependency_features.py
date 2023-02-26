@@ -10,7 +10,6 @@ Features implemented:
 """
 import pandas as pd
 import spacy
-# from spacy import displacy
 from sklearn.preprocessing import OneHotEncoder
 
 from abstract_features import AbstractFeatures
@@ -38,6 +37,7 @@ class DependencyParseFeatures(AbstractFeatures):
         self.nlp = spacy.load('en_core_web_sm')
         self.features = []
 
+        self.current_sentence_id = -1
         self.target_head = None
         self.senti_head = None
         self.lowest_ancestor_of_heads = None
@@ -66,11 +66,8 @@ class DependencyParseFeatures(AbstractFeatures):
                 from the annotation.
         """
         # preparatory calculations for creating the features
-        self._preparation_for_features(df_row.sentence,
-                                       df_row.sentexprStart,
-                                       df_row.sentexprEnd,
-                                       df_row.targetStart,
-                                       df_row.targetEnd)
+        self._preparation_for_features(df_row)
+        
         # create and save features
         try:
             if self.senti_head is None or self.target_head is None:
@@ -85,25 +82,25 @@ class DependencyParseFeatures(AbstractFeatures):
             self.features.extend([-1.0] * 184)
         return self.features
     
-    def _preparation_for_features(self, sentence, senti_ex_span_start, sent_span_end, target_span_start, target_span_end):
+    def _preparation_for_features(self, df_row): 
         """Complete preparatory work for feature engineering.
         Most importantly, calculate the heads of the target/sentiment
         expression and the lowest common ancestor of these heads in the
         dependency parse.
-
-        Args:
-            sentence(str): sentence which includes the sentiment expression and
-                target
-            sent_span_start(int): span start of sentiment expression
-            sent_span_end(int): span end of sentiment expression
-            target_span_start(int): span start of target
-            target_span_end(int): span end of target
         """
         self._reset_attributes()
-        self.sent_doc = self.nlp(sentence)
+        
+        # generates dependency parse if it is an unparsed sentence to avoid duplicate parsing
+        if df_row.sentenceID != self.current_sentence_id:
+            self.current_sentence_id = df_row.sentenceID
+            self.sent_doc = self.nlp(df_row.sentence)
+
         # convert character span from annotation to token span 
-        senti_start_token_i, senti_end_token_i = self._find_token_idx(sentence[senti_ex_span_start:sent_span_end])
-        target_start_token_i, target_end_token_i = self._find_token_idx(sentence[target_span_start:target_span_end])
+        senti_start_token_i, senti_end_token_i = \
+            self._find_token_idx(df_row.sentence[df_row.sentexprStart:df_row.sentexprEnd])
+        target_start_token_i, target_end_token_i = \
+            self._find_token_idx(df_row.sentence[df_row.targetStart:df_row.targetEnd])
+        
         # find heads and their lowest ancestor
         self.senti_head = self._find_head(self.sent_doc[senti_start_token_i:senti_end_token_i])
         self.target_head = self._find_head(self.sent_doc[target_start_token_i:target_end_token_i])
@@ -220,14 +217,14 @@ def test_single_instance(n, items_df, dep_feature):
 
 
 def test_write_all_instances_to_file(items_df, dep_feature):
-    with open("../../output/test_dependency.csv", "w") as f_out:
+    with open("../output/instances/test_dependency.csv", "w") as f_out:
         for idx in range(0,len(items_df)):
             item = items_df.iloc[idx]
             print(dep_feature.get_features(item), file=f_out)
 
 
 if __name__ == "__main__":
-    items_df = pd.read_csv("../../output/unsc.csv")
+    items_df = pd.read_csv("../output/UNSC_2014_SPV.7154_sentsplit.csv")
     dep_feature = DependencyParseFeatures()
     #test_single_instance(3, items_df, dep_feature)
     test_write_all_instances_to_file(items_df, dep_feature)

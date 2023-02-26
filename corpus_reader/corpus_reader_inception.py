@@ -95,7 +95,9 @@ class InceptionCorpusReader:
                     sourceEnd
                 ])
 
-            except KeyError: # catch annotation mistakes
+            except KeyError: 
+                print(f"Relation (id: {item['%ID']}) in {os.path.split(json_path)[1]} skipped due to annotation mistake.\
+                      e.g. the direction of the relation was annotated reversely.")
                 continue    
 
         return pd.DataFrame(tmp_rows,

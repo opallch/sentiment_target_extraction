@@ -271,7 +271,7 @@ class IndexableSpannotatableParentedTree(ParentedTree):
         x = 0
         for subtree in self.subtrees():
             subtree._span_start = x
-            subtree._span_end = x + len(subtree.leaves()) - 1
+            subtree._span_end = x + len(subtree.leaves())
             if subtree.height() == 2:
                 x += 1
 
@@ -297,8 +297,7 @@ def create_training_data(df, parser):
     cpf = ConstituencyParseFeatures()
     dpf = DependencyParseFeatures()
     X, y = [], []
-    for row in df.iterrows():
-        row = row[1]
+    for idx, row in df.iterrows():
         for k, v in transform_spans(row).items():
             row[k] = v
         tree = self.parse_sent(row["sentence"])
@@ -319,16 +318,13 @@ def create_training_data(df, parser):
 
 
 def get_subtree_by_span(tree, span_start, span_end):
-    trees = list(
-        tree.subtrees(
-            filter=lambda x: (x.span_start() == span_start) and \
-                             (x.span_end() == span_end)
-        )
-    )
-    if trees:
-        return trees[-1]
-    else:
-        return None
+    subtrees = []
+
+    for tree in tree.subtrees():
+        if tree.span_start() == span_start and tree.span_end() == span_end:
+            subtrees.append(tree)
+
+    return subtrees[-1]
 
 
 def transform_spans(df_row):

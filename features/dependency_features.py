@@ -64,7 +64,11 @@ class DependencyParseFeatures(AbstractFeatures):
             list: list of features for a row from the corpus reader dataframe.
 
         Raises:
-            SpansError: 
+            SpansError: If target head and sentiment expression head cannot be
+                found in the sentence. A list of -1.0 will be returned as the
+                features vector in this case. This can be traced back to the
+                mistakes in the spans of sentiment expression and/or target
+                from the annotation.
         """
         # preparatory calculations for creating the features
         self._preparation_for_features(df_row)

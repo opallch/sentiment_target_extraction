@@ -8,6 +8,10 @@ from spacy import displacy
 from nltk.tree import ParentedTree, Tree
 from nltk.tokenize import word_tokenize
 
+#### Exceptions ####
+class NotATargetRelationError(Exception):
+    pass
+
 #### for dependency features ####
 
 DEP_TAGS = [
@@ -324,7 +328,10 @@ def get_subtree_by_span(tree, span_start, span_end):
         if tree.span_start() == span_start and tree.span_end() == span_end:
             subtrees.append(tree)
 
-    return subtrees[-1]
+    if subtrees:
+        return subtrees[-1]
+    
+    return None
 
 
 def transform_spans(df_row):

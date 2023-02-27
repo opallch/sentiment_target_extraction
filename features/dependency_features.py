@@ -15,10 +15,7 @@ import spacy
 from sklearn.preprocessing import OneHotEncoder
 
 from abstract_features import AbstractFeatures
-from feature_utils import DEP_TAGS, FINE_GRAINED_POS_TAGS, lowest_common_ancestor, distance_btw_3_pts
-
-class NotATargetRelationError(Exception):
-    pass
+from feature_utils import DEP_TAGS, FINE_GRAINED_POS_TAGS, lowest_common_ancestor, distance_btw_3_pts, NotATargetRelationError
 
 
 class SpansError(Exception):

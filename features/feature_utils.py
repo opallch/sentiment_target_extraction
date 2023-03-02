@@ -302,7 +302,7 @@ def create_training_data(df, parser):
     dpf = DependencyParseFeatures()
     X, y = [], []
     for idx, row in df.iterrows():
-        for k, v in transform_spans(row).items():
+        for k, v in char_span_to_token_span(row).items():
             row[k] = v
         tree = self.parse_sent(row["sentence"])
         tree.add_spans()
@@ -334,7 +334,7 @@ def get_subtree_by_span(tree, span_start, span_end):
     return None
 
 
-def transform_spans(df_row, tokenize_func=word_tokenize):
+def char_span_to_token_span(df_row, tokenize_func=word_tokenize):
     return (
         len(tokenize_func(df_row["sentence"][:df_row["sentexprStart"]])),
         len(tokenize_func(df_row["sentence"][:df_row["sentexprEnd"]])),
@@ -342,6 +342,26 @@ def transform_spans(df_row, tokenize_func=word_tokenize):
         len(tokenize_func(df_row["sentence"][:df_row["targetEnd"]]))
     )
 
+# TODO
+def token_span_to_char_span(df_row, token_span_start, token_span_end, tokenize_func=word_tokenize):
+    tokens = tokenize_func(df_row["sentence"])
+    tmp_str = ''
+    for i in range(0, token_span_start):
+        tmp_str +=  tokens[i]
+        tmp_str += ' '
+    char_span_start = len(tmp_str)
+
+    for i in range(token_span_start, token_span_end):
+        tmp_str += tokens[i]
+        tmp_str += ' '
+    char_span_end = len(tmp_str) - 1 # to exclude the last space
+
+    return char_span_start, char_span_end
+#  0  1     2
+#  01234567890
+# 'He loves me'
+#  1     2
+# 'loves me'
 
 def parse_sent(sent, parser):
     tree = IndexableSpannotatableParentedTree.convert(parser.parse(sent))
@@ -350,7 +370,7 @@ def parse_sent(sent, parser):
     return tree
 
 
-def get_candidates(sent, tree):
+def get_candidates(tree):
     return [
         subtree for subtree in list(tree.subtrees())[1:]
         if subtree.label() in {"NP", "S"}

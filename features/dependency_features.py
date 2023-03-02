@@ -15,7 +15,7 @@ import spacy
 from sklearn.preprocessing import OneHotEncoder
 
 from abstract_features import AbstractFeatures
-from feature_utils import DEP_TAGS, FINE_GRAINED_POS_TAGS, lowest_common_ancestor, distance_btw_3_pts, NotATargetRelationError, transform_spans
+from feature_utils import DEP_TAGS, FINE_GRAINED_POS_TAGS, lowest_common_ancestor, distance_btw_3_pts, NotATargetRelationError, char_span_to_token_span
 
 
 class SpansError(Exception):
@@ -134,7 +134,7 @@ class DependencyParseFeatures(AbstractFeatures):
             This can be traced back to the mistakes in the spans
             of sentiment expression and/or target from the annotation. 
         """
-        return transform_spans(df_row, tokenize_func=self.nlp)
+        return char_span_to_token_span(df_row, tokenize_func=self.nlp)
     
     def _find_head(self, tokens_in_phrase):
         """It returns the head of the a phrase.
@@ -142,7 +142,7 @@ class DependencyParseFeatures(AbstractFeatures):
              tokens_in_phrase (list of spacy.Token): list of tokens of a given phrase i.e. sentiment expression/target
          Returns:
              head(spacy.Token): head of the phrase
-        """
+    """
         head = None
         # for one-token-phrase
         if len(tokens_in_phrase) == 1:

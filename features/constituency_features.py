@@ -9,7 +9,7 @@ import os
 
 from sklearn.preprocessing import OneHotEncoder
 
-from feature_utils import get_subtree_by_span, transform_spans, POS_TAGS, NotATargetRelationError
+from feature_utils import get_subtree_by_span, char_span_to_token_span, POS_TAGS, NotATargetRelationError
 from abstract_features import AbstractFeatures
 
 
@@ -29,7 +29,7 @@ class ConstituencyParseFeatures(AbstractFeatures):
 
         # transform character spans to token spans  
         _, _, target_start_token_span, target_end_token_span =  \
-            transform_spans(df_row)
+            char_span_to_token_span(df_row)
 
         target_tree = get_subtree_by_span(tree,
                                           target_start_token_span,
@@ -52,7 +52,7 @@ class ConstituencyParseFeatures(AbstractFeatures):
         """Find phrase that connects target to sentiment expression."""
         # transform character spans to token spans  
         sentexpr_start_token_span, sentexpr_end_token_span, target_start_token_span, target_end_token_span =  \
-            transform_spans(df_row)
+            char_span_to_token_span(df_row)
 
         trees = tree.subtrees(
             filter=lambda x: all([

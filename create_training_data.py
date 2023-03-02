@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from features.constituency_features import ConstituencyParseFeatures
 from features.dependency_features import DependencyParseFeatures
-from features.feature_utils import transform_spans, parse_sent, get_candidates
+from features.feature_utils import char_span_to_token_span, parse_sent, get_candidates
 
 # cancel an annoying UserWarning
 import warnings
@@ -23,7 +23,7 @@ def create_training_data(df, filename=""):
     X, y = [], []
     for row_tuple in tqdm(df.iterrows()):
         row = row_tuple[1].copy()
-        for k, v in transform_spans(row).items():
+        for k, v in char_span_to_token_span(row).items():
             row[k] = v
         tree = parse_sent(row["sentence"], parser)
         tree.add_spans()

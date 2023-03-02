@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from constituency_features import ConstituencyParseFeatures
 from dependency_features import DependencyParseFeatures
-from feature_utils import parse_sent, InvalidFilenameError, transform_spans, get_candidates, NotATargetRelationError
+from feature_utils import parse_sent, InvalidFilenameError, token_span_to_char_span, get_candidates, NotATargetRelationError
 
 tqdm.pandas()
 warnings.filterwarnings("ignore")
@@ -59,12 +59,6 @@ class FeatureVectorCreator:
             df =  pd.read_csv(filename, encoding="utf-8")
         else:
             raise InvalidFilenameError("Input file must be .csv or .pkl")
-        
-        # # transform character spans to word level spans
-        # df = df[["sentexprStart", "sentexprEnd", "targetStart", "targetEnd"]] = df.apply(
-        #     lambda x: transform_spans(x), axis=1, result_type="expand"
-        # )
-        # return dataframe with just the columns that are needed here
         df = df.drop(columns=['sourceStart', 'sourceEnd'])
 
         return df
@@ -106,53 +100,43 @@ class FeatureVectorCreator:
     def _add_negative_instances_to_row(self, df_row):
         """Create negative instances for classifier training."""
         tree = self._trees[df_row["sentence"]]
-        # transform character spans to token spans  
-        _, _, target_start_token_span, target_end_token_span =  \
-            transform_spans(df_row)
-        
-        # collect candidates
-        candidates = get_candidates(df_row["sentence"], tree)
-        candidates = [
-            self._create_candidate_row(df_row, c) for c in candidates
-            if not ((c.span_start() == target_start_token_span -1) and 
-                    (c.span_end() == target_end_token_span) -1) # TODO: maybe not -1
-        ]
-        #print(candidates)
-        # return as dataframe
-        df = pd.DataFrame(candidates, columns=df_row.index)
+        candidate_items = []
+        for c in get_candidates(tree):
+            candidate_items.append(
+                self._create_candidate_row(df_row, c)
+            )
+        df = pd.DataFrame(candidate_items, columns=df_row.index)
         return df
 
     @staticmethod
     def _create_candidate_row(df_row, candidate):
         """Return candidate as item."""
-        # transform character spans to token spans  
-        sentexpr_start_token_span, sentexpr_end_token_span, _, _ =  \
-            transform_spans(df_row)
+        target_start_char_span, target_end_char_span =  \
+                token_span_to_char_span(df_row, candidate.span_start(), candidate.span_end())
         
         return (
             df_row['Unnamed: 0'],
             df_row['rawTextFilename'],
             df_row['sentenceID'],
             df_row["sentence"],  # sentence
-            sentexpr_start_token_span,  # senti expr start
-            sentexpr_end_token_span,  # senti expr end
-            candidate.span_start(),  # target cadidate start
-            candidate.span_end(),  # target candidate end 
+            df_row["sentexprStart"],  # senti expr start
+            df_row["sentexprEnd"],  # senti expr end
+            target_start_char_span,  # target cadidate start
+            target_end_char_span,  # target candidate end 
             0  # label
         )
 
     def _all_features_for_all_instances(self) -> None:
         """Append the instance features lists to self._list_of_vecs."""
         print("Creating vectors...")
-        with open(self._filepath_out, 'w') as vec_f_out, open(self._label_filename, 'w') as label_f_out:
-            for idx in range(0,len(self.items_df)):
-                try:
-                    item = self.items_df.iloc[idx]
-                    print(self._all_features_for_each_instance(item), file=vec_f_out)
-                    print(item['label'], file=label_f_out)
-                except NotATargetRelationError:
-                    print(f'Row {idx} is skipped, since it is not a sentiment-expression-to-target (probably a sentiment-expression-to-source relation instead).')
-                    continue
+        for idx in range(0,len(self.items_df)):
+            try:
+                item = self.items_df.iloc[idx]
+                self._list_of_vecs.append(self._all_features_for_each_instance(item))
+                self._labels.append(item['label'])
+            except NotATargetRelationError:
+                print(f'Row {idx} is skipped, since it is not a sentiment-expression-to-target (probably a sentiment-expression-to-source relation instead).')
+                continue
 
     def _append_vector_to_list(self, features_vec:list, label) -> list:
         """Append the features lists for an instance to `self._list_of_vecs`"""
@@ -172,17 +156,19 @@ class FeatureVectorCreator:
                 return None
         return all_vectors
 
-    def _write_labels_to_file(self):
-        """Save labels in .pkl or .csv file."""
-        if self._label_filename.endswith(".pkl"):
-            pd.to_pickle(
-                self._labels,
-                self._label_filename
-            )
-        elif self._label_filename.endswith(".csv"):
-            self._labels.to_csv(self._filepath_out, encoding="utf-8")
-        else:
-            raise InvalidFilenameError("Label file must be .csv or .pkl")
+
+    def _list_of_vecs2df(self) -> pd.DataFrame:
+        """Turn `self._list_of_vecs` into a dataframe."""
+        return pd.DataFrame(np.array(self._list_of_vecs))
+
+    def _get_trees(self):
+        """Parse all sentences once to avoid double parsing."""
+        parser = self.PARSER
+        print("Parsing sentences...")
+        return {
+            sent: parse_sent(sent, parser)
+            for sent in tqdm(self.items_df["sentence"].unique())
+        }
 
     def _write_vectors_to_file(self) -> None:
         """Write self.df_vectors to the ouput `.pkl` file."""
@@ -200,19 +186,21 @@ class FeatureVectorCreator:
             df.to_csv(self._filepath_out, encoding="utf-8")
         else:
             raise InvalidFilenameError("Output file must be .csv or .pkl")
+    
+    def _write_labels_to_file(self):
+        """Save labels in .pkl or .csv file."""
+        if self._label_filename.endswith(".pkl"):
+            pd.to_pickle(
+                self._labels,
+                self._label_filename
+            )
+        elif self._label_filename.endswith(".csv"):
+            with open(self._label_filename, 'w') as label_f_out:  
+                for label in self._labels:
+                    print(f'{label}', file=label_f_out)
+        else:
+            raise InvalidFilenameError("Label file must be .csv or .pkl")
 
-    def _list_of_vecs2df(self) -> pd.DataFrame:
-        """Turn `self._list_of_vecs` into a dataframe."""
-        return pd.DataFrame(np.array(self._list_of_vecs))
-
-    def _get_trees(self):
-        """Parse all sentences once to avoid double parsing."""
-        parser = self.PARSER
-        print("Parsing sentences...")
-        return {
-            sent: parse_sent(sent, parser)
-            for sent in tqdm(self.items_df["sentence"].unique())
-        }
 
 if __name__ == "__main__":
     features_creator = FeatureVectorCreator(items_df_path="../output/UNSC_2014_SPV.7154_sentsplit.csv", 

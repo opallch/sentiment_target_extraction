@@ -15,7 +15,7 @@ import spacy
 from sklearn.preprocessing import OneHotEncoder
 
 from abstract_features import AbstractFeatures
-from feature_utils import DEP_TAGS, FINE_GRAINED_POS_TAGS, lowest_common_ancestor, distance_btw_3_pts, NotATargetRelationError
+from feature_utils import DEP_TAGS, FINE_GRAINED_POS_TAGS, lowest_common_ancestor, distance_btw_3_pts, NotATargetRelationError, transform_spans
 
 
 class SpansError(Exception):
@@ -103,10 +103,8 @@ class DependencyParseFeatures(AbstractFeatures):
             self.sent_doc = self.nlp(df_row.sentence)
 
         # convert character span from annotation to token span 
-        senti_start_token_i, senti_end_token_i = \
-            self._find_token_idx(df_row.sentence[df_row.sentexprStart:df_row.sentexprEnd])
-        target_start_token_i, target_end_token_i = \
-            self._find_token_idx(df_row.sentence[df_row.targetStart:df_row.targetEnd])
+        senti_start_token_i, senti_end_token_i, target_start_token_i, target_end_token_i = \
+            self._find_token_idx(df_row)
         
         # find heads and their lowest ancestor
         self.senti_head = self._find_head(self.sent_doc[senti_start_token_i:senti_end_token_i])
@@ -120,7 +118,7 @@ class DependencyParseFeatures(AbstractFeatures):
         self.senti_head = None
         self.lowest_ancestor_of_heads = None
 
-    def _find_token_idx(self, phrase):
+    def _find_token_idx(self, df_row):
         """
         It returns the start and end indices of the given phrase in a sentence.
         Args:
@@ -136,26 +134,8 @@ class DependencyParseFeatures(AbstractFeatures):
             This can be traced back to the mistakes in the spans
             of sentiment expression and/or target from the annotation. 
         """
-        try:
-            tokens_in_phrase = [token.text for token in self.nlp(phrase)]
-            # search the first token in sentence
-            for token in self.sent_doc:
-                if token.text == tokens_in_phrase[0]:
-                    phrase_found = True
-                    # check if all the tokens in ex match
-                    for j in range(1, len(tokens_in_phrase)):
-                        if self.sent_doc[token.i + j].text != tokens_in_phrase[j]:
-                            phrase_found = False
-                            break
-                    if phrase_found:
-                        return token.i, token.i + len(tokens_in_phrase) # end_idx is used for slicing, so exclusive
-            if not phrase_found:
-                raise IndexError
-        
-        except IndexError:
-            return -1, -1
+        return transform_spans(df_row, tokenize_func=self.nlp)
     
-
     def _find_head(self, tokens_in_phrase):
         """It returns the head of the a phrase.
         Args:

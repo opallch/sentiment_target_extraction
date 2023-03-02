@@ -206,5 +206,5 @@ if __name__ == "__main__":
     features_creator = FeatureVectorCreator(items_df_path="../output/UNSC_2014_SPV.7154_sentsplit.csv", 
                                             filepath_out="../output/instances/test_all_features.csv", 
                                             label_filename="../output/instances/test_labels.csv", 
-                                            undersample=False)
+                                            undersample=True)
     features_creator.get_vectors()

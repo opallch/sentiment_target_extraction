@@ -22,7 +22,7 @@ class FeatureVectorCreator:
 
     PARSER = Parser("benepar_en3")
 
-    def __init__(self, items_df_path:str, filepath_out:str, label_filename="", undersample=False):
+    def __init__(self, items_df_path:str, filepath_out:str, undersample=False):
         """Constructor of FeatureVectorCreator.
 
         Args:
@@ -40,15 +40,16 @@ class FeatureVectorCreator:
             self.out_file_pkl(str): 
             self.list_of_vecs(list): list of feature vectors 
         """
+        self._filepath_out = filepath_out
         self._undersample = undersample
-        self._label_filename = label_filename
         self.items_df = self._load_df(items_df_path)
+        
         self._trees = self._get_trees()
-        if label_filename:
-            self.items_df = self._add_negative_instances()
         self._features_classes = [ConstituencyParseFeatures(self._trees),
                                   DependencyParseFeatures()]
-        self._filepath_out = filepath_out
+        
+        self.items_df = self._add_negative_instances()
+        # temporary         
         self._list_of_vecs = []
         self._labels = []
         
@@ -159,7 +160,9 @@ class FeatureVectorCreator:
 
     def _list_of_vecs2df(self) -> pd.DataFrame:
         """Turn `self._list_of_vecs` into a dataframe."""
-        return pd.DataFrame(np.array(self._list_of_vecs))
+        vectors_df = pd.DataFrame(np.array(self._list_of_vecs))
+        vectors_df['label'] = np.array(self._labels, dtype=np.int64)
+        return vectors_df
 
     def _get_trees(self):
         """Parse all sentences once to avoid double parsing."""
@@ -173,10 +176,7 @@ class FeatureVectorCreator:
     def _write_vectors_to_file(self) -> None:
         """Write self.df_vectors to the ouput `.pkl` file."""
         df = self._list_of_vecs2df()
-        # if labels are to be saved:
-        if self._label_filename:
-            self._write_labels_to_file()
-        # save feature vectors
+
         if self._filepath_out.endswith(".pkl"):
             pd.to_pickle(
                 df,
@@ -186,25 +186,9 @@ class FeatureVectorCreator:
             df.to_csv(self._filepath_out, encoding="utf-8")
         else:
             raise InvalidFilenameError("Output file must be .csv or .pkl")
-    
-    def _write_labels_to_file(self):
-        """Save labels in .pkl or .csv file."""
-        if self._label_filename.endswith(".pkl"):
-            pd.to_pickle(
-                self._labels,
-                self._label_filename
-            )
-        elif self._label_filename.endswith(".csv"):
-            with open(self._label_filename, 'w') as label_f_out:  
-                for label in self._labels:
-                    print(f'{label}', file=label_f_out)
-        else:
-            raise InvalidFilenameError("Label file must be .csv or .pkl")
-
 
 if __name__ == "__main__":
     features_creator = FeatureVectorCreator(items_df_path="../output/UNSC_2014_SPV.7154_sentsplit.csv", 
                                             filepath_out="../output/instances/test_all_features.csv", 
-                                            label_filename="../output/instances/test_labels.csv", 
                                             undersample=True)
     features_creator.get_vectors()

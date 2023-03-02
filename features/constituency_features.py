@@ -13,7 +13,7 @@ from feature_utils import get_subtree_by_span, transform_spans, POS_TAGS, NotATa
 from abstract_features import AbstractFeatures
 
 
-class ConstituencyParesFeatures(AbstractFeatures):
+class ConstituencyParseFeatures(AbstractFeatures):
 
     def __init__(self, trees):
         self._trees = trees 
@@ -85,7 +85,7 @@ def test_write_all_instances_to_file(items_df_path):
         for sent in tqdm(items_df["sentence"].unique())
     }
 
-    constituency_feature = ConstituencyParesFeatures(trees)
+    constituency_feature = ConstituencyParseFeatures(trees)
     with open("../output/instances/test_constituency.csv", "w") as f_out:
             for idx in range(0,len(items_df)):
                 try:

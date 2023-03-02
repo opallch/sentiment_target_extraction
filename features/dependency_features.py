@@ -154,6 +154,7 @@ class DependencyParseFeatures(AbstractFeatures):
         
         except IndexError:
             return -1, -1
+    
 
     def _find_head(self, tokens_in_phrase):
         """It returns the head of the a phrase.

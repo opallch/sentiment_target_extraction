@@ -30,8 +30,6 @@ class FeatureVectorCreator:
                 DataFrame from Corpus Reader
             filepath_out(str): filename of the `.pkl` file in which the
                 features vectors will be stored
-            label_filename (str): filename of gold instance label file, if one
-                is to be created
 
         Attributes:
             self.features_classes(list): list of objects which inherit from

@@ -1,5 +1,5 @@
 # Feature Engineering
-Currently, some features from the constituency parse and the dependency parse are implemented. Categorical features are implemented with One-Hot-Encoding.
+Currently, some features from the constituency parse and the dependency parse are implemented. Categorical features are implemented with One-Hot-Encoding. Use `create_feature_vectors.py` to output a DataFrame with vectors and with the corresponding labels.
 
 ## Constituency Features
 1. Tree label of the target <!--POS Tag right?-->

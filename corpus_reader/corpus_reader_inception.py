@@ -152,11 +152,11 @@ class InceptionCorpusReader:
                 rel_items.append(item) 
             
             elif item['%TYPE'] == 'webanno.custom.ORLSpan':
-                if item['Roles2'] == 'SubExp':
+                if item.get('Roles2', '') == 'SubExp':
                     senti_expr_items[item_id] = item
-                elif item['Roles2'] == 'Target':
+                elif item.get('Roles2', '') == 'Target':
                     target_items[item_id] = item
-                elif item['Roles2'] == 'Source':
+                elif item.get('Roles2', '') == 'Source':
                     source_items[item_id] = item
             
             elif item['%TYPE'] == 'de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Sentence':

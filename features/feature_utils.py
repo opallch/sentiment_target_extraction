@@ -299,31 +299,6 @@ class IndexableSpannotatableParentedTree(ParentedTree):
     def span_end(self):
         return self._span_end
 
-#### for creating training data ####
-
-def create_training_data(df, parser):
-    cpf = ConstituencyParseFeatures()
-    dpf = DependencyParseFeatures()
-    X, y = [], []
-    for idx, row in df.iterrows():
-        for k, v in char_span_to_token_span(row).items():
-            row[k] = v
-        tree = self.parse_sent(row["sentence"])
-        tree.add_spans()
-        candidates = get_candidates(row["sentence"], parser, tree)
-        for c in candidates:
-            instance = row.copy()
-            if (c.span_start() == row["targetStart"]) and (c.span_end() == row["targetEnd"]):
-                y.append(1)
-            else:
-                y.append(0)
-            instance["targetStart"] = c.span_start()
-            instance["targetEnd"] = c.span_end()
-            c_f = cpf.get_features(instance)
-            d_f = dpf.get_features(row)
-            X.append(c_f + d_f)
-    return X, y
-
 
 def get_subtree_by_span(tree, span_start, span_end):
     subtrees = []
@@ -346,7 +321,7 @@ def char_span_to_token_span(df_row, tokenize_func=word_tokenize):
         len(tokenize_func(df_row["sentence"][:df_row["targetEnd"]]))
     )
 
-# TODO
+
 def token_span_to_char_span(df_row, token_span_start, token_span_end, tokenize_func=word_tokenize):
     tokens = tokenize_func(df_row["sentence"])
     tmp_str = ''
@@ -361,11 +336,7 @@ def token_span_to_char_span(df_row, token_span_start, token_span_end, tokenize_f
     char_span_end = len(tmp_str) - 1 # to exclude the last space
 
     return char_span_start, char_span_end
-#  0  1     2
-#  01234567890
-# 'He loves me'
-#  1     2
-# 'loves me'
+
 
 def parse_sent(sent, parser):
     tree = IndexableSpannotatableParentedTree.convert(parser.parse(sent))
@@ -379,18 +350,3 @@ def get_candidates(tree):
         subtree for subtree in list(tree.subtrees())[1:]
         if subtree.label() in {"NP", "S"}
     ]
-
-
-# if __name__ == "__main__":
-#     items_df = pd.read_pickle("../test_files/items.pkl")
-#     item = items_df.iloc[1100]
-#     nlp = spacy.load('en_core_web_sm')
-#     sentence = item.sentence
-#     sent_doc = nlp(sentence)
-#     displacy.serve(sent_doc, style='dep')
-#     root = next(sent_doc.sents).root
-#     lca = lowest_common_ancestor(sent_doc[9], sent_doc[15], root)
-#     print(lca) 
-#     print(
-#         distance_btw_3_pts(sent_doc[9], sent_doc[15], lca)
-#     )

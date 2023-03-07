@@ -12,6 +12,7 @@ from tqdm import tqdm
 
 from features.constituency_features import ConstituencyParseFeatures
 from features.dependency_features import DependencyParseFeatures
+from features.word_embedding import WordEmbeddingFeatures
 from features.feature_utils import parse_sent, InvalidFilenameError, token_span_to_char_span, get_candidates, NotATargetRelationError, SpansError
 
 tqdm.pandas()
@@ -43,9 +44,10 @@ class FeatureVectorCreator:
         self.items_df = self._load_df(items_df_path)
         
         self._trees = self._get_trees()
-        self._features_classes = [ConstituencyParseFeatures(self._trees),
-                                  DependencyParseFeatures()]
-        
+        self._features_classes = [#ConstituencyParseFeatures(self._trees),
+                                  #DependencyParseFeatures(),
+                                  WordEmbeddingFeatures('./output/word2vec.model', './data/inception/raw_text/')
+                                  ]
         self.items_df = self._add_negative_instances()
         # temporary         
         self._list_of_vecs = []
@@ -138,6 +140,12 @@ class FeatureVectorCreator:
                 continue
             except SpansError:
                 print(f'Row {idx} is skipped, since target head and sentiment expression head could not be found in the sentence..')
+                continue
+            except AttributeError as e:
+                print(e)
+                continue
+            except KeyError as e:
+                print(e)
                 continue
 
     def _append_vector_to_list(self, features_vec:list, label) -> list:

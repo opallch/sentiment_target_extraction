@@ -10,9 +10,9 @@ import pandas as pd
 from benepar import Parser
 from tqdm import tqdm
 
-from constituency_features import ConstituencyParseFeatures
-from dependency_features import DependencyParseFeatures
-from feature_utils import parse_sent, InvalidFilenameError, token_span_to_char_span, get_candidates, NotATargetRelationError, SpansError
+from features.constituency_features import ConstituencyParseFeatures
+from features.dependency_features import DependencyParseFeatures
+from features.feature_utils import parse_sent, InvalidFilenameError, token_span_to_char_span, get_candidates, NotATargetRelationError, SpansError
 
 tqdm.pandas()
 warnings.filterwarnings("ignore")
@@ -189,7 +189,7 @@ class FeatureVectorCreator:
             raise InvalidFilenameError("Output file must be .csv or .pkl")
 
 if __name__ == "__main__":
-    features_creator = FeatureVectorCreator(items_df_path="../output/UNSC_2014_SPV.7154_sentsplit.csv", 
-                                            filepath_out="../output/instances/UNSC_2014_SPV.7154_sentsplit_instances.csv", 
+    features_creator = FeatureVectorCreator(items_df_path="./output/UNSC_2014_SPV.7154_sentsplit.csv", 
+                                            filepath_out="./output/instances/UNSC_2014_SPV.7154_sentsplit_instances.csv", 
                                             undersample=True)
     features_creator.get_vectors()

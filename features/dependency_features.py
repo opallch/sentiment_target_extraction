@@ -14,8 +14,8 @@ import pandas as pd
 import spacy
 from sklearn.preprocessing import OneHotEncoder
 
-from abstract_features import AbstractFeatures
-from feature_utils import DEP_TAGS, FINE_GRAINED_POS_TAGS, lowest_common_ancestor, distance_btw_3_pts, NotATargetRelationError, SpansError, char_span_to_token_span
+from features.abstract_features import AbstractFeatures
+from features.feature_utils import DEP_TAGS, FINE_GRAINED_POS_TAGS, lowest_common_ancestor, distance_btw_3_pts, NotATargetRelationError, SpansError, char_span_to_token_span
 
 
 class DependencyParseFeatures(AbstractFeatures):

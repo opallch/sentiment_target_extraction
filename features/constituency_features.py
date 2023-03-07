@@ -9,8 +9,8 @@ import os
 
 from sklearn.preprocessing import OneHotEncoder
 
-from feature_utils import get_subtree_by_span, char_span_to_token_span, POS_TAGS, NotATargetRelationError
-from abstract_features import AbstractFeatures
+from features.feature_utils import get_subtree_by_span, char_span_to_token_span, POS_TAGS, NotATargetRelationError
+from features.abstract_features import AbstractFeatures
 
 
 class ConstituencyParseFeatures(AbstractFeatures):

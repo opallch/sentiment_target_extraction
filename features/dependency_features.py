@@ -15,11 +15,7 @@ import spacy
 from sklearn.preprocessing import OneHotEncoder
 
 from abstract_features import AbstractFeatures
-from feature_utils import DEP_TAGS, FINE_GRAINED_POS_TAGS, lowest_common_ancestor, distance_btw_3_pts, NotATargetRelationError, char_span_to_token_span
-
-
-class SpansError(Exception):
-    pass
+from feature_utils import DEP_TAGS, FINE_GRAINED_POS_TAGS, lowest_common_ancestor, distance_btw_3_pts, NotATargetRelationError, SpansError, char_span_to_token_span
 
 
 class DependencyParseFeatures(AbstractFeatures):
@@ -62,10 +58,7 @@ class DependencyParseFeatures(AbstractFeatures):
 
         Raises:
             SpansError: If target head and sentiment expression head cannot be
-                found in the sentence. A list of -1.0 will be returned as the
-                features vector in this case. This can be traced back to the
-                mistakes in the spans of sentiment expression and/or target
-                from the annotation.
+                found in the sentence.
         """
         # preparatory calculations for creating the features
         self._preparation_for_features(df_row)

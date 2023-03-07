@@ -12,6 +12,10 @@ from nltk.tokenize import word_tokenize
 class NotATargetRelationError(Exception):
     pass
 
+
+class SpansError(Exception):
+    pass
+
 #### for dependency features ####
 
 DEP_TAGS = [

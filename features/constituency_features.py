@@ -25,6 +25,9 @@ class ConstituencyParseFeatures(AbstractFeatures):
             df_row (pd.Series): instance as pd.Series containing at least the
                 word level spans of the target (candidate) and senti expression
         """
+        if df_row.targetStart == -1 or df_row.targetEnd == -1:
+            raise NotATargetRelationError
+
         tree = self._trees[df_row["sentence"]]
 
         # transform character spans to token spans  
@@ -44,8 +47,6 @@ class ConstituencyParseFeatures(AbstractFeatures):
             if lca is not None:
                 oh_lcalabel = list(enc.transform([[lca.label()]]).toarray()[0]) 
                 return oh_tlabel + oh_lcalabel
-        
-        raise NotATargetRelationError()
     
     @staticmethod
     def _get_lowest_common_ancestor(tree, df_row):

@@ -136,17 +136,14 @@ class DependencyParseFeatures(AbstractFeatures):
          Returns:
              head(spacy.Token): head of the phrase
     """
-        head = None
         # for one-token-phrase
         if len(tokens_in_phrase) == 1:
-            head = tokens_in_phrase[0]
+            return tokens_in_phrase[0]
         # for phrase of multiple tokens
         else:
             for token in tokens_in_phrase:
                 if token.head not in tokens_in_phrase or token.dep_ == 'ROOT':
-                    head = token
-                    break
-        return head
+                    return token
 
     def _lowest_ancestor_of_heads(self):
         """Find lowest common ancestor of target and sentiment expression head."""

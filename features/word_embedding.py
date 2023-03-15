@@ -5,7 +5,7 @@ from gensim.models import Word2Vec
 import spacy
 
 from features.abstract_features import AbstractFeatures
-from features.feature_utils import DEP_TAGS, FINE_GRAINED_POS_TAGS, lowest_common_ancestor, distance_btw_3_pts, NotATargetRelationError, SpansError, char_span_to_token_span
+from features.feature_utils import SpansError, char_span_to_token_span, NotATargetRelationError
 from nltk.tokenize import word_tokenize
 
 
@@ -19,13 +19,16 @@ class WordEmbeddingFeatures(AbstractFeatures):
         self.nlp = spacy.load('en_core_web_sm')
 
 
-    def get_features(self, df_row): # TODO check if works
-        # features to be implemented: sentiment target embedding
+    def get_features(self, df_row):
+        # features to be implemented: sentiment target head word embedding
         # find the head token of target expression using _find_head()
+        if df_row.targetStart == -1 or df_row.targetEnd == -1:
+            raise NotATargetRelationError
+        
         tokens = self.nlp(df_row.sentence)
         _, _, target_token_span_start, target_token_span_end = char_span_to_token_span(df_row, tokenize_func=self.nlp)
+        
         head = self._find_head(tokens[target_token_span_start:target_token_span_end])
-        print(head.text)
         
         vector = self.word2vec_model.wv[head.text]
         return list(vector)
@@ -59,14 +62,13 @@ class WordEmbeddingFeatures(AbstractFeatures):
          Returns:
              head(spacy.Token): head of the phrase
         """
-        head = None
         # for one-token-phrase
         if len(tokens_in_phrase) == 1:
-            head = tokens_in_phrase[0]
+            return tokens_in_phrase[0]
         # for phrase of multiple tokens
         else:
             for token in tokens_in_phrase:
                 if token.head not in tokens_in_phrase or token.dep_ == 'ROOT':
-                    head = token
-                    break
-        return head
+                    return token
+        
+        raise SpansError

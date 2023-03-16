@@ -9,7 +9,7 @@ import os
 
 from sklearn.preprocessing import OneHotEncoder
 
-from features.feature_utils import get_subtree_by_span, char_span_to_token_span, POS_TAGS, NotATargetRelationError
+from features.feature_utils import get_subtree_by_span, char_span_to_token_span, POS_TAGS, NotATargetRelationError, SpansError, TargetConstituencySubtreeNotFoundError
 from features.abstract_features import AbstractFeatures
 
 
@@ -47,6 +47,8 @@ class ConstituencyParseFeatures(AbstractFeatures):
             if lca is not None:
                 oh_lcalabel = list(enc.transform([[lca.label()]]).toarray()[0]) 
                 return oh_tlabel + oh_lcalabel
+
+        raise TargetConstituencySubtreeNotFoundError
     
     @staticmethod
     def _get_lowest_common_ancestor(tree, df_row):

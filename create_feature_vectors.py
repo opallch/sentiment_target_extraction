@@ -13,8 +13,7 @@ from tqdm import tqdm
 from features.constituency_features import ConstituencyParseFeatures
 from features.dependency_features import DependencyParseFeatures
 from features.word_embedding import WordEmbeddingFeatures
-from features.feature_utils import parse_sent, InvalidFilenameError, token_span_to_char_span, get_candidates, NotATargetRelationError, SpansError
-
+from features.feature_utils import *
 tqdm.pandas()
 warnings.filterwarnings("ignore")
 
@@ -44,8 +43,8 @@ class FeatureVectorCreator:
         self.items_df = self._load_df(items_df_path)
         
         self._trees = self._get_trees()
-        self._features_classes = [#ConstituencyParseFeatures(self._trees),
-                                  #DependencyParseFeatures(),
+        self._features_classes = [ConstituencyParseFeatures(self._trees),
+                                  DependencyParseFeatures(),
                                   WordEmbeddingFeatures('./output/word2vec.model', './data/inception/raw_text/')
                                   ]
         self.items_df = self._add_negative_instances()
@@ -130,23 +129,31 @@ class FeatureVectorCreator:
     def _all_features_for_all_instances(self) -> None:
         """Append the instance features lists to self._list_of_vecs."""
         print("Creating vectors...")
-        for idx in range(0,len(self.items_df)):
-            try:
-                item = self.items_df.iloc[idx]
-                self._list_of_vecs.append(self._all_features_for_each_instance(item))
-                self._labels.append(item['label'])
-            except NotATargetRelationError:
-                print(f'Row {idx} is skipped, since it is not a sentiment-expression-to-target (probably a sentiment-expression-to-source relation instead).')
-                continue
-            except SpansError:
-                print(f'Row {idx} is skipped, since target head and sentiment expression head could not be found in the sentence..')
-                continue
-            except AttributeError as e:
-                print(e)
-                continue
-            except KeyError as e:
-                print(e)
-                continue
+        with open('./constituency_bugs.txt' , 'w') as f_out:
+            for idx in range(0,len(self.items_df)):
+                try:
+                    item = self.items_df.iloc[idx]
+                    self._list_of_vecs.append(self._all_features_for_each_instance(item))
+                    self._labels.append(item['label'])
+                except NotATargetRelationError:
+                    print(f'Row {idx} is skipped, since it is not a sentiment-expression-to-target (probably a sentiment-expression-to-source relation instead).')
+                    continue
+                except SpansError:
+                    print(f'Row {idx} is skipped, since target head and sentiment expression head could not be found in the sentence.')
+                    continue
+                except AttributeError as e:
+                    print(e)
+                    continue
+                except KeyError as e:
+                    print(e)
+                    continue
+                except TargetConstituencySubtreeNotFoundError:
+                    print(item.rawTextFilename, file=f_out)
+                    print(item.sentence, file=f_out)
+                    print(item.sentence[item.targetStart:item.targetEnd], end='\n\n', file=f_out)
+                    print(item.label, file=f_out)
+                    continue
+
 
     def _append_vector_to_list(self, features_vec:list, label) -> list:
         """Append the features lists for an instance to `self._list_of_vecs`"""
@@ -165,7 +172,6 @@ class FeatureVectorCreator:
             else:
                 return None
         return all_vectors
-
 
     def _list_of_vecs2df(self) -> pd.DataFrame:
         """Turn `self._list_of_vecs` into a dataframe."""

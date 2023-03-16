@@ -307,16 +307,26 @@ class IndexableSpannotatableParentedTree(ParentedTree):
 
 
 def get_subtree_by_span(tree, span_start, span_end):
-    subtrees = []
-
-    for tree in tree.subtrees():
-        if tree.span_start() == span_start and tree.span_end() == span_end:
-            subtrees.append(tree)
-
-    if subtrees:
-        return subtrees[-1]
+    if tree.span_start() == span_start and tree.span_end() == span_end:
+        return tree
     
-    return None
+    else:
+        subtrees = []
+
+        for subtree in tree.subtrees():
+            if subtree.span_start() == span_start and subtree.span_end() == span_end:
+                subtrees.append(subtree)
+
+            # elif (subtree.span_start() + 1 == span_start and subtree.span_end() + 1 == span_end) or \
+            #     (subtree.span_start() - 1 == span_start and subtree.span_end() - 1 == span_end):
+            #     print(f'given span: {span_start}, {span_end}')
+            #     print(f'subtree span: {subtree.span_start()}, {subtree.span_end()}')
+            #     print(subtree)
+            
+        if subtrees:
+            return subtrees[-1]
+
+        return None
 
 
 def char_span_to_token_span(df_row, tokenize_func=word_tokenize):

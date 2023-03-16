@@ -2,6 +2,7 @@
 """
 Functions for training of classifiers and classification data.
 """
+import os
 import pandas as pd
 
 from sklearn import svm
@@ -12,9 +13,26 @@ from create_feature_vectors import FeatureVectorCreator
 
 
 if __name__ == "__main__":
-    df = pd.read_csv("output/instances/UNSC_2014_SPV.7154_sentsplit_instances.csv")
+    # create feature vectors
+    ITEMS_DF_PATH = "./output/UNSC_2014_SPV.7154_sentsplit.csv"
+    INSTANCES_DF_PATH = "./output/instances/UNSC_2014_SPV.7154_sentsplit_instances.csv"
+    FEATURE_CLASSES = ['dependency', 'word2vec'] #['constituency', 'dependency', 'word2vec']
+    SCORING=['f1_weighted', 'f1_micro', 'f1_macro']
+    K = 10
+    RESULT_ROOT = './results/'
+    RESULT_FILENAME = f'{K}_fold_result_{"_".join(FEATURE_CLASSES)}.txt'
 
-    ## (1) Prepare feature vectors
+    if not os.path.exists(RESULT_ROOT): os.mkdir(RESULT_ROOT)
+
+    features_creator = FeatureVectorCreator(items_df_path=ITEMS_DF_PATH, 
+                                            filepath_out=INSTANCES_DF_PATH, 
+                                            undersample=True,
+                                            feature_classes=FEATURE_CLASSES
+                        )
+    features_creator.get_vectors()
+
+    df = pd.read_csv(INSTANCES_DF_PATH)
+
     # Get rid of columns we don't need for classification
     labels = df.label.values
     df_selected = df.drop(["Unnamed: 0", "label"],
@@ -28,19 +46,19 @@ if __name__ == "__main__":
         model,
         feature_vecs,
         labels,
-        cv=10,
-        scoring=['f1_weighted', 'f1_micro', 'f1_macro']
+        cv=K,
+        scoring=SCORING
     )
 
     cv_results_dummy = cross_validate(
         dummy_clf,
         feature_vecs,
         labels,
-        cv=10,
-        scoring=['f1_weighted', 'f1_micro', 'f1_macro']
+        cv=K,
+        scoring=SCORING
     )
 
-    with open('./result.txt', 'w') as f_out:
+    with open(os.path.join(RESULT_ROOT, RESULT_FILENAME), 'w') as f_out:
         print('svm:', file=f_out)
         for key, value in cv_results_model.items():
             print(value, '\t', key, file=f_out)

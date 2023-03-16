@@ -22,7 +22,7 @@ class FeatureVectorCreator:
 
     PARSER = Parser("benepar_en3")
 
-    def __init__(self, items_df_path:str, filepath_out:str, undersample=False):
+    def __init__(self, items_df_path:str, filepath_out:str, feature_classes, undersample=True):
         """Constructor of FeatureVectorCreator.
 
         Args:
@@ -43,10 +43,16 @@ class FeatureVectorCreator:
         self.items_df = self._load_df(items_df_path)
         
         self._trees = self._get_trees()
-        self._features_classes = [ConstituencyParseFeatures(self._trees),
-                                  #DependencyParseFeatures(),
-                                  #WordEmbeddingFeatures('./output/word2vec.model', './data/inception/raw_text/')
-                                  ]
+        
+        # for ablation
+        self._features_classes = []
+        if 'constituency' in feature_classes:
+            self._features_classes.append(ConstituencyParseFeatures(self._trees))
+        if 'dependency' in feature_classes:
+            self._features_classes.append(DependencyParseFeatures())
+        if 'word2vec' in feature_classes:
+            self._features_classes.append(WordEmbeddingFeatures('./output/word2vec.model', './data/inception/raw_text/'))
+
         self.items_df = self._add_negative_instances()
         # temporary         
         self._list_of_vecs = []

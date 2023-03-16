@@ -7,6 +7,7 @@ import pandas as pd
 from spacy import displacy
 from nltk.tree import ParentedTree, Tree
 from nltk.tokenize import word_tokenize
+from nltk.tokenize.treebank import TreebankWordDetokenizer
 
 #### Exceptions ####
 class NotATargetRelationError(Exception):
@@ -328,20 +329,14 @@ def char_span_to_token_span(df_row, tokenize_func=word_tokenize):
 
 
 def token_span_to_char_span(df_row, token_span_start, token_span_end, tokenize_func=word_tokenize):
-    # TODO find a better way to detokenize the sentence
     tokens = tokenize_func(df_row["sentence"])
     tmp_str = ''
-    for i in range(0, token_span_start):
-        tmp_str +=  tokens[i]
-        if tokens[i].isalnum() : # non-punctuation
-            tmp_str += ' '
+
+    tmp_str = TreebankWordDetokenizer().detokenize(tokens[:token_span_start])
     char_span_start = len(tmp_str)
 
-    for i in range(token_span_start, token_span_end):
-        tmp_str += tokens[i]
-        if tokens[i].isalnum() : # non-punctuation
-            tmp_str += ' '
-    char_span_end = len(tmp_str) - 1 # to exclude the last space
+    tmp_str = TreebankWordDetokenizer().detokenize(tokens[:token_span_end])
+    char_span_end = len(tmp_str) 
 
     return char_span_start, char_span_end
 

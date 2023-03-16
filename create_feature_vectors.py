@@ -44,8 +44,8 @@ class FeatureVectorCreator:
         
         self._trees = self._get_trees()
         self._features_classes = [ConstituencyParseFeatures(self._trees),
-                                  DependencyParseFeatures(),
-                                  WordEmbeddingFeatures('./output/word2vec.model', './data/inception/raw_text/')
+                                  #DependencyParseFeatures(),
+                                  #WordEmbeddingFeatures('./output/word2vec.model', './data/inception/raw_text/')
                                   ]
         self.items_df = self._add_negative_instances()
         # temporary         

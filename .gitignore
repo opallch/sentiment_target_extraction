@@ -140,3 +140,4 @@ output/
 *.pdf
 opencv.zip
 opinion-target-extraction-im-unsc-*
+results/

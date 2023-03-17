@@ -7,6 +7,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import pickle
 from benepar import Parser
 from tqdm import tqdm
 
@@ -189,10 +190,13 @@ class FeatureVectorCreator:
         """Parse all sentences once to avoid double parsing."""
         parser = self.PARSER
         print("Parsing sentences...")
-        return {
+        parses_dict = {
             sent: parse_sent(sent, parser)
             for sent in tqdm(self.items_df["sentence"].unique())
         }
+        #print(parses_dict["If Russia really has genuine concerns about Ukraine's Russian-speaking population, then its actions have done nothing to safeguard their interests."])
+        
+        return parses_dict
 
     def _write_vectors_to_file(self) -> None:
         """Write self.df_vectors to the ouput `.pkl` file."""

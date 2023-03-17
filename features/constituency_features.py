@@ -30,15 +30,19 @@ class ConstituencyParseFeatures(AbstractFeatures):
 
         tree = self._trees[df_row["sentence"]]
 
-        # transform character spans to token spans  
-        _, _, target_start_token_span, target_end_token_span =  \
-            char_span_to_token_span(df_row)
+        if df_row.sentence == df_row.sentence[df_row.targetStart:df_row.targetEnd]: # if target is the whole sentence
+            target_tree = tree 
 
-        target_tree = get_subtree_by_span(tree,
-                                          target_start_token_span,
-                                          target_end_token_span)
+        else:
+            # transform character spans to token spans  
+            _, _, target_start_token_span, target_end_token_span =  \
+                char_span_to_token_span(df_row)
 
-        if target_tree is not None:
+            target_tree = get_subtree_by_span(tree,
+                                            target_start_token_span,
+                                            target_end_token_span)
+
+        if target_tree:
             # one hot encode tree labels
             enc = OneHotEncoder(handle_unknown="ignore")
             enc.fit([[i] for i in POS_TAGS])
@@ -53,6 +57,9 @@ class ConstituencyParseFeatures(AbstractFeatures):
     @staticmethod
     def _get_lowest_common_ancestor(tree, df_row):
         """Find phrase that connects target to sentiment expression."""
+        if df_row.sentence == df_row.sentence[df_row.targetStart:df_row.targetEnd]: # if target is the whole sentence
+            return tree 
+        
         # transform character spans to token spans  
         sentexpr_start_token_span, sentexpr_end_token_span, target_start_token_span, target_end_token_span =  \
             char_span_to_token_span(df_row)
@@ -69,6 +76,7 @@ class ConstituencyParseFeatures(AbstractFeatures):
         trees = list(trees)
         if trees:
             return trees[-1]  # last tree in list is the lowest common node
+        
         return None
 
 

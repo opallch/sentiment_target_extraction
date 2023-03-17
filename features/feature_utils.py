@@ -314,14 +314,8 @@ def get_subtree_by_span(tree, span_start, span_end):
         subtrees = []
 
         for subtree in tree.subtrees():
-            if subtree.span_start() == span_start and subtree.span_end() == span_end:
+            if subtree.span_start() <= span_start and subtree.span_end() >= span_end:
                 subtrees.append(subtree)
-
-            # elif (subtree.span_start() + 1 == span_start and subtree.span_end() + 1 == span_end) or \
-            #     (subtree.span_start() - 1 == span_start and subtree.span_end() - 1 == span_end):
-            #     print(f'given span: {span_start}, {span_end}')
-            #     print(f'subtree span: {subtree.span_start()}, {subtree.span_end()}')
-            #     print(subtree)
             
         if subtrees:
             return subtrees[-1]

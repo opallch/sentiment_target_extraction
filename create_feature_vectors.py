@@ -154,13 +154,7 @@ class FeatureVectorCreator:
                 except KeyError as e:
                     print(e)
                     continue
-                except TargetConstituencySubtreeNotFoundError:
-                    print(item.rawTextFilename, file=f_out)
-                    print(item.sentence, file=f_out)
-                    print(item.sentence[item.targetStart:item.targetEnd], end='\n\n', file=f_out)
-                    print(item.label, file=f_out)
-                    continue
-
+ 
 
     def _append_vector_to_list(self, features_vec:list, label) -> list:
         """Append the features lists for an instance to `self._list_of_vecs`"""
@@ -194,8 +188,7 @@ class FeatureVectorCreator:
             sent: parse_sent(sent, parser)
             for sent in tqdm(self.items_df["sentence"].unique())
         }
-        #print(parses_dict["If Russia really has genuine concerns about Ukraine's Russian-speaking population, then its actions have done nothing to safeguard their interests."])
-        
+        #print(parses_dict["Prime Minister Yatsenyuk went to Donetsk; although he did not meet with the protesters, he did say the right things about dialogue, decentralization and his desire to find a way out of the problem."])
         return parses_dict
 
     def _write_vectors_to_file(self) -> None:

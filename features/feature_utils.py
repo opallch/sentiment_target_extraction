@@ -18,10 +18,6 @@ class SpansError(Exception):
     pass
 
 
-class TargetConstituencySubtreeNotFoundError(Exception):
-    pass
-
-
 #### for dependency features ####
 
 DEP_TAGS = [

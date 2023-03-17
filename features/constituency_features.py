@@ -9,7 +9,7 @@ import os
 
 from sklearn.preprocessing import OneHotEncoder
 
-from features.feature_utils import get_subtree_by_span, char_span_to_token_span, POS_TAGS, NotATargetRelationError, SpansError, TargetConstituencySubtreeNotFoundError
+from features.feature_utils import get_subtree_by_span, char_span_to_token_span, POS_TAGS, NotATargetRelationError, TargetConstituencySubtreeNotFoundError, LowestCommonAncestorNotFoundError
 from features.abstract_features import AbstractFeatures
 
 
@@ -42,24 +42,18 @@ class ConstituencyParseFeatures(AbstractFeatures):
                                             target_start_token_span,
                                             target_end_token_span)
 
-        if target_tree:
-            # one hot encode tree labels
-            enc = OneHotEncoder(handle_unknown="ignore")
-            enc.fit([[i] for i in POS_TAGS])
-            oh_tlabel = list(enc.transform([[target_tree.label()]]).toarray()[0])
-            lca = self._get_lowest_common_ancestor(tree, df_row) 
-            if lca is not None:
-                oh_lcalabel = list(enc.transform([[lca.label()]]).toarray()[0]) 
-                return oh_tlabel + oh_lcalabel
-
-        raise TargetConstituencySubtreeNotFoundError
-    
+        # one hot encode tree labels
+        enc = OneHotEncoder(handle_unknown="ignore")
+        enc.fit([[i] for i in POS_TAGS])
+        oh_tlabel = list(enc.transform([[target_tree.label()]]).toarray()[0])
+        lca = self._get_lowest_common_ancestor(tree, df_row) 
+        oh_lcalabel = list(enc.transform([[lca.label()]]).toarray()[0]) 
+        return oh_tlabel + oh_lcalabel
+           
+           
     @staticmethod
     def _get_lowest_common_ancestor(tree, df_row):
         """Find phrase that connects target to sentiment expression."""
-        if df_row.sentence == df_row.sentence[df_row.targetStart:df_row.targetEnd]: # if target is the whole sentence
-            return tree 
-        
         # transform character spans to token spans  
         sentexpr_start_token_span, sentexpr_end_token_span, target_start_token_span, target_end_token_span =  \
             char_span_to_token_span(df_row)
@@ -77,7 +71,7 @@ class ConstituencyParseFeatures(AbstractFeatures):
         if trees:
             return trees[-1]  # last tree in list is the lowest common node
         
-        return None
+        return tree # if target is the whole sentence or the lca is already the root of the target 
 
 
 ########## For Trial ##########

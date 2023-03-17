@@ -142,7 +142,7 @@ class FeatureVectorCreator:
                 self._labels.append(item['label'])
             except NotATargetRelationError:
                 pass
-                # print(f'Row {idx} is skipped, since it is not a sentiment-expression-to-target (probably a sentiment-expression-to-source relation instead).')
+                print(f'Row {idx} is skipped, since it is not a sentiment-expression-to-target (probably a sentiment-expression-to-source relation instead).')
                 print(e)
             except KeyError as e:
                 print(e)
@@ -185,12 +185,10 @@ class FeatureVectorCreator:
         """Parse all sentences once to avoid double parsing."""
         parser = self.PARSER
         print("Parsing sentences...")
-        parses_dict = {
+        return {
             sent: parse_sent(sent, parser)
             for sent in tqdm(self.items_df["sentence"].unique())
         }
-        #print(parses_dict["Prime Minister Yatsenyuk went to Donetsk; although he did not meet with the protesters, he did say the right things about dialogue, decentralization and his desire to find a way out of the problem."])
-        return parses_dict
 
     def _write_vectors_to_file(self) -> None:
         """Write self.df_vectors to the ouput `.pkl` file."""

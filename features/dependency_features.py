@@ -15,7 +15,7 @@ import spacy
 from sklearn.preprocessing import OneHotEncoder
 
 from features.abstract_features import AbstractFeatures
-from features.feature_utils import DEP_TAGS, FINE_GRAINED_POS_TAGS, lowest_common_ancestor, distance_btw_3_pts, NotATargetRelationError, SpansError, char_span_to_token_span
+from features.feature_utils import *
 
 
 class DependencyParseFeatures(AbstractFeatures):
@@ -64,8 +64,11 @@ class DependencyParseFeatures(AbstractFeatures):
         self._preparation_for_features(df_row)
         
         # create and save features
-        if self.senti_head is None or self.target_head is None:
-            raise SpansError
+        if self.senti_head is None:
+            raise SentiExprHeadNotFoundError
+        
+        if self.target_head is None:
+            raise TargetHeadNotFoundError
         else:
             self._rel_btw_heads()
             self._pos_senti_head()

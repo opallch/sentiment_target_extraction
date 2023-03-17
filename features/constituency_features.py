@@ -9,7 +9,7 @@ import os
 
 from sklearn.preprocessing import OneHotEncoder
 
-from features.feature_utils import get_subtree_by_span, char_span_to_token_span, POS_TAGS, NotATargetRelationError, TargetConstituencySubtreeNotFoundError, LowestCommonAncestorNotFoundError
+from features.feature_utils import get_subtree_by_span, char_span_to_token_span, POS_TAGS, NotATargetRelationError
 from features.abstract_features import AbstractFeatures
 
 

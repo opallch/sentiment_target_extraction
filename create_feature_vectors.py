@@ -7,7 +7,6 @@ import warnings
 
 import numpy as np
 import pandas as pd
-import pickle
 from benepar import Parser
 from tqdm import tqdm
 
@@ -136,25 +135,27 @@ class FeatureVectorCreator:
     def _all_features_for_all_instances(self) -> None:
         """Append the instance features lists to self._list_of_vecs."""
         print("Creating vectors...")
-        with open('./constituency_bugs.txt' , 'w') as f_out:
-            for idx in range(0,len(self.items_df)):
-                try:
-                    item = self.items_df.iloc[idx]
-                    self._list_of_vecs.append(self._all_features_for_each_instance(item))
-                    self._labels.append(item['label'])
-                except NotATargetRelationError:
-                    print(f'Row {idx} is skipped, since it is not a sentiment-expression-to-target (probably a sentiment-expression-to-source relation instead).')
-                    continue
-                except SpansError:
-                    print(f'Row {idx} is skipped, since target head and sentiment expression head could not be found in the sentence.')
-                    continue
-                except AttributeError as e:
-                    print(e)
-                    continue
-                except KeyError as e:
-                    print(e)
-                    continue
- 
+        for idx in range(0,len(self.items_df)):
+            try:
+                item = self.items_df.iloc[idx]
+                self._list_of_vecs.append(self._all_features_for_each_instance(item))
+                self._labels.append(item['label'])
+            except NotATargetRelationError:
+                pass
+                # print(f'Row {idx} is skipped, since it is not a sentiment-expression-to-target (probably a sentiment-expression-to-source relation instead).')
+                print(e)
+            except KeyError as e:
+                print(e)
+            except TargetHeadNotFoundError:
+                print('TargetHeadNotFoundError')
+                print(item.sentence)
+                print(item.sentence[item.targetStart:item.targetEnd])
+            except SentiExprHeadNotFoundError:
+                print('SentiExprHeadNotFoundError')
+                print(item.sentence)
+                print(item.sentence[item.sentexprStart:item.sentexprEnd])
+            finally:
+                continue
 
     def _append_vector_to_list(self, features_vec:list, label) -> list:
         """Append the features lists for an instance to `self._list_of_vecs`"""

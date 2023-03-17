@@ -14,9 +14,12 @@ class NotATargetRelationError(Exception):
     pass
 
 
-class SpansError(Exception):
+class SentiExprHeadNotFoundError(Exception):
     pass
+        
 
+class TargetHeadNotFoundError(Exception):
+    pass
 
 #### for dependency features ####
 

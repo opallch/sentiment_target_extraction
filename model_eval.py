@@ -16,7 +16,7 @@ if __name__ == "__main__":
     # create feature vectors
     ITEMS_DF_PATH = "./output/UNSC_2014_SPV.7154_sentsplit.csv"
     INSTANCES_DF_PATH = "./output/instances/UNSC_2014_SPV.7154_sentsplit_instances.csv"
-    FEATURE_CLASSES = ['dependency', 'word2vec'] #['constituency', 'dependency', 'word2vec']
+    FEATURE_CLASSES = ['constituency', 'dependency', 'word2vec']
     SCORING=['f1_weighted', 'f1_micro', 'f1_macro']
     K = 10
     RESULT_ROOT = './results/'

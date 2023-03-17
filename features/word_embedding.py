@@ -5,7 +5,7 @@ from gensim.models import Word2Vec
 import spacy
 
 from features.abstract_features import AbstractFeatures
-from features.feature_utils import SpansError, char_span_to_token_span, NotATargetRelationError
+from features.feature_utils import *
 from nltk.tokenize import word_tokenize
 
 

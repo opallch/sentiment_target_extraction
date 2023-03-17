@@ -4,6 +4,7 @@ Functions for training of classifiers and classification data.
 """
 import os
 import pandas as pd
+import pickle
 
 from sklearn import svm
 from sklearn.model_selection import cross_validate
@@ -16,11 +17,13 @@ if __name__ == "__main__":
     # create feature vectors
     ITEMS_DF_PATH = "./output/UNSC_2014_SPV.7154_sentsplit.csv"
     INSTANCES_DF_PATH = "./output/instances/UNSC_2014_SPV.7154_sentsplit_instances.csv"
-    FEATURE_CLASSES = ['constituency', 'dependency', 'word2vec']
+    FEATURE_CLASSES =  ['constituency', 'dependency'] # ['constituency', 'dependency', 'word2vec']
     SCORING=['f1_weighted', 'f1_micro', 'f1_macro']
     K = 10
     RESULT_ROOT = './results/'
     RESULT_FILENAME = f'{K}_fold_result_{"_".join(FEATURE_CLASSES)}.txt'
+    MODEL_DIR = './output/'
+    MODEL_FILENAME = f'{"_".join(FEATURE_CLASSES)}_svm.pkl'
 
     if not os.path.exists(RESULT_ROOT): os.mkdir(RESULT_ROOT)
 
@@ -41,6 +44,9 @@ if __name__ == "__main__":
 
     dummy_clf = DummyClassifier(strategy='most_frequent') # alternative: 'prior', 'stratified', 'uniform'
     model = svm.SVC()
+    
+    with open(os.path.join(MODEL_DIR, MODEL_FILENAME), 'wb') as f_out:
+        pickle.dump(model, f_out)
     
     cv_results_model = cross_validate(
         model,

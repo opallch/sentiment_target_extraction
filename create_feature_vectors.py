@@ -147,13 +147,15 @@ class FeatureVectorCreator:
             except KeyError as e:
                 print(e)
             except TargetHeadNotFoundError:
-                print('TargetHeadNotFoundError')
-                print(item.sentence)
-                print(item.sentence[item.targetStart:item.targetEnd])
+                pass
+                # print('TargetHeadNotFoundError')
+                # print(item.sentence)
+                # print(item.sentence[item.targetStart:item.targetEnd])
             except SentiExprHeadNotFoundError:
-                print('SentiExprHeadNotFoundError')
-                print(item.sentence)
-                print(item.sentence[item.sentexprStart:item.sentexprEnd])
+                pass
+                # print('SentiExprHeadNotFoundError')
+                # print(item.sentence)
+                # print(item.sentence[item.sentexprStart:item.sentexprEnd])
             finally:
                 continue
 

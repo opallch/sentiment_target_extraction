@@ -43,10 +43,7 @@ if __name__ == "__main__":
     feature_vecs = df_selected.to_numpy()  # or df_selected.values
 
     dummy_clf = DummyClassifier(strategy='most_frequent') # alternative: 'prior', 'stratified', 'uniform'
-    model = svm.SVC()
-    
-    with open(os.path.join(MODEL_DIR, MODEL_FILENAME), 'wb') as f_out:
-        pickle.dump(model, f_out)
+    model = svm.SVC(probability=True)
     
     cv_results_model = cross_validate(
         model,
@@ -72,3 +69,9 @@ if __name__ == "__main__":
         print('majority class:', file=f_out)
         for key, value in cv_results_dummy.items():
             print(value, '\t', key, file=f_out)
+    
+    # train the model with all data for later 
+    model.fit(feature_vecs, labels)
+
+    with open(os.path.join(MODEL_DIR, MODEL_FILENAME), 'wb') as f_out:
+        pickle.dump(model, f_out)

@@ -22,7 +22,7 @@ class FeatureVectorCreator:
 
     PARSER = Parser("benepar_en3")
 
-    def __init__(self, items_df_path:str, filepath_out:str, feature_classes, undersample=True):
+    def __init__(self, feature_classes, items_df_path="./output/UNSC_2014_SPV.7154_sentsplit.csv", filepath_out="./output/instances/UNSC_2014_SPV.7154_sentsplit_instances.csv", undersample=True):
         """Constructor of FeatureVectorCreator.
 
         Args:
@@ -42,12 +42,12 @@ class FeatureVectorCreator:
         self._undersample = undersample
         self.items_df = self._load_df(items_df_path)
         
-        self._trees = self._get_trees()
+        self.trees = self._get_trees()
         
         # for ablation
         self._features_classes = []
         if 'constituency' in feature_classes:
-            self._features_classes.append(ConstituencyParseFeatures(self._trees))
+            self._features_classes.append(ConstituencyParseFeatures(self.trees))
         if 'dependency' in feature_classes:
             self._features_classes.append(DependencyParseFeatures())
         if 'word2vec' in feature_classes:
@@ -105,21 +105,21 @@ class FeatureVectorCreator:
 
     def _add_negative_instances_to_row(self, df_row):
         """Create negative instances for classifier training."""
-        tree = self._trees[df_row["sentence"]]
+        tree = self.trees[df_row["sentence"]]
         candidate_items = []
         for c in get_candidates(tree):
             candidate_items.append(
-                self._create_candidate_row(df_row, c)
+                self.create_candidate_row(df_row, c)
             )
         df = pd.DataFrame(candidate_items, columns=df_row.index)
         return df
 
     @staticmethod
-    def _create_candidate_row(df_row, candidate):
+    def create_candidate_row(df_row, candidate):
         """Return candidate as item."""
         target_start_char_span, target_end_char_span =  \
                 token_span_to_char_span(df_row, candidate.span_start(), candidate.span_end())
-        
+
         return (
             df_row['Unnamed: 0'],
             df_row['rawTextFilename'],
@@ -138,7 +138,7 @@ class FeatureVectorCreator:
         for idx in range(0,len(self.items_df)):
             try:
                 item = self.items_df.iloc[idx]
-                self._list_of_vecs.append(self._all_features_for_each_instance(item))
+                self._list_of_vecs.append(self.all_features_for_each_instance(item))
                 self._labels.append(item['label'])
             except NotATargetRelationError:
                 pass
@@ -165,7 +165,7 @@ class FeatureVectorCreator:
             self._list_of_vecs.append(features_vec)
             self._labels.append(label)
 
-    def _all_features_for_each_instance(self, df_row:pd.Series) -> list:
+    def all_features_for_each_instance(self, df_row) -> list:
         """Combine all features vectors from different feature classes."""
         all_vectors = []
         # collect vectors

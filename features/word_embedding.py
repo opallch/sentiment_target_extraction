@@ -35,8 +35,9 @@ class WordEmbeddingFeatures(AbstractFeatures):
 
 
     def _train_model(self, word2vec_model_output_path, raw_text_files_root):
+        print('Training word2vec model...')
         tokenized_sentences = self._get_tokenized_sentences(raw_text_files_root)
-        model = Word2Vec(sentences=tokenized_sentences, vector_size=100, window=5, min_count=1, workers=4)
+        model = Word2Vec(sentences=tokenized_sentences, vector_size=5000, window=5, min_count=1, workers=4)
         model.save(word2vec_model_output_path) 
 
         return model
@@ -70,5 +71,3 @@ class WordEmbeddingFeatures(AbstractFeatures):
             for token in tokens_in_phrase:
                 if token.head not in tokens_in_phrase or token.dep_ == 'ROOT':
                     return token
-        
-        raise SpansError

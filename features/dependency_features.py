@@ -8,17 +8,14 @@ Features implemented:
 3. POS-tag of the target head
 4. Distance between the two heads
 """
+import os
+
 import pandas as pd
 import spacy
-# from spacy import displacy
 from sklearn.preprocessing import OneHotEncoder
 
-from abstract_features import AbstractFeatures
-from feature_utils import DEP_TAGS, FINE_GRAINED_POS_TAGS, lowest_common_ancestor, distance_btw_3_pts
-
-
-class SpansError(Exception):
-    pass
+from features.abstract_features import AbstractFeatures
+from features.feature_utils import *
 
 
 class DependencyParseFeatures(AbstractFeatures):
@@ -38,6 +35,7 @@ class DependencyParseFeatures(AbstractFeatures):
         self.nlp = spacy.load('en_core_web_sm')
         self.features = []
 
+        self.current_sentence_id = -1
         self.target_head = None
         self.senti_head = None
         self.lowest_ancestor_of_heads = None
@@ -60,50 +58,50 @@ class DependencyParseFeatures(AbstractFeatures):
 
         Raises:
             SpansError: If target head and sentiment expression head cannot be
-                found in the sentence. A list of -1.0 will be returned as the
-                features vector in this case. This can be traced back to the
-                mistakes in the spans of sentiment expression and/or target
-                from the annotation.
+                found in the sentence.
         """
         # preparatory calculations for creating the features
-        self._preparation_for_features(df_row.sentence,
-                                       df_row.sentexprStart,
-                                       df_row.sentexprEnd,
-                                       df_row.targetStart,
-                                       df_row.targetEnd)
+        self._preparation_for_features(df_row)
+        
         # create and save features
-        try:
-            if self.senti_head is None or self.target_head is None:
-                raise SpansError
-            else:
-                self._rel_btw_heads()
-                self._pos_senti_head()
-                self._pos_target_head()
-                self._distance_btw_heads()
-        except SpansError:
-            # WARNING: hardcode the length of vector
-            self.features.extend([-1.0] * 184)
+        if self.senti_head is None:
+            raise SentiExprHeadNotFoundError
+        
+        if self.target_head is None:
+            raise TargetHeadNotFoundError
+        else:
+            self._rel_btw_heads()
+            self._pos_senti_head()
+            self._pos_target_head()
+            self._distance_btw_heads()
+
         return self.features
     
-    def _preparation_for_features(self, sentence, senti_ex_span_start, sent_span_end, target_span_start, target_span_end):
+    def _preparation_for_features(self, df_row): 
         """Complete preparatory work for feature engineering.
         Most importantly, calculate the heads of the target/sentiment
         expression and the lowest common ancestor of these heads in the
         dependency parse.
 
-        Args:
-            sentence(str): sentence which includes the sentiment expression and
-                target
-            sent_span_start(int): span start of sentiment expression
-            sent_span_end(int): span end of sentiment expression
-            target_span_start(int): span start of target
-            target_span_end(int): span end of target
+        raises:
+            NotATargetRelationError: when the start/end span of the target of
+                row is -1. This indicates that the row corresponds to a source relation
+                instead of a target relation.
         """
+        if df_row.targetStart == -1 or df_row.targetEnd == -1:
+            raise NotATargetRelationError
+
         self._reset_attributes()
-        self.sent_doc = self.nlp(sentence)
+        
+        # generates dependency parse if it is an unparsed sentence to avoid duplicate parsing
+        if df_row.sentenceID != self.current_sentence_id:
+            self.current_sentence_id = df_row.sentenceID
+            self.sent_doc = self.nlp(df_row.sentence)
+
         # convert character span from annotation to token span 
-        senti_start_token_i, senti_end_token_i = self._find_token_idx(sentence[senti_ex_span_start:sent_span_end])
-        target_start_token_i, target_end_token_i = self._find_token_idx(sentence[target_span_start:target_span_end])
+        senti_start_token_i, senti_end_token_i, target_start_token_i, target_end_token_i = \
+            self._find_token_idx(df_row)
+        
         # find heads and their lowest ancestor
         self.senti_head = self._find_head(self.sent_doc[senti_start_token_i:senti_end_token_i])
         self.target_head = self._find_head(self.sent_doc[target_start_token_i:target_end_token_i])
@@ -116,7 +114,7 @@ class DependencyParseFeatures(AbstractFeatures):
         self.senti_head = None
         self.lowest_ancestor_of_heads = None
 
-    def _find_token_idx(self, phrase):
+    def _find_token_idx(self, df_row):
         """
         It returns the start and end indices of the given phrase in a sentence.
         Args:
@@ -132,43 +130,23 @@ class DependencyParseFeatures(AbstractFeatures):
             This can be traced back to the mistakes in the spans
             of sentiment expression and/or target from the annotation. 
         """
-        try:
-            tokens_in_phrase = [token.text for token in self.nlp(phrase)]
-            # search the first token in sentence
-            for token in self.sent_doc:
-                if token.text == tokens_in_phrase[0]:
-                    phrase_found = True
-                    # check if all the tokens in ex match
-                    for j in range(1, len(tokens_in_phrase)):
-                        if self.sent_doc[token.i + j].text != tokens_in_phrase[j]:
-                            phrase_found = False
-                            break
-                    if phrase_found:
-                        return token.i, token.i + len(tokens_in_phrase) # end_idx is used for slicing, so exclusive
-            if not phrase_found:
-                raise IndexError
-        
-        except IndexError:
-            return -1, -1
-
+        return char_span_to_token_span(df_row, tokenize_func=self.nlp)
+    
     def _find_head(self, tokens_in_phrase):
         """It returns the head of the a phrase.
         Args:
              tokens_in_phrase (list of spacy.Token): list of tokens of a given phrase i.e. sentiment expression/target
          Returns:
              head(spacy.Token): head of the phrase
-        """
-        head = None
+    """
         # for one-token-phrase
         if len(tokens_in_phrase) == 1:
-            head = tokens_in_phrase[0]
+            return tokens_in_phrase[0]
         # for phrase of multiple tokens
         else:
             for token in tokens_in_phrase:
                 if token.head not in tokens_in_phrase or token.dep_ == 'ROOT':
-                    head = token
-                    break
-        return head
+                    return token
 
     def _lowest_ancestor_of_heads(self):
         """Find lowest common ancestor of target and sentiment expression head."""
@@ -211,23 +189,30 @@ class DependencyParseFeatures(AbstractFeatures):
             list(self.ohe_dep.transform([[self.target_head.dep_]]).toarray()[0])
         )
 
+########## For Trial ##########
 
-def test_single_instance(n, items_df, dep_feature):
+def test_single_instance(n, items_df_path, dep_feature):
+    items_df = pd.read_csv(items_df_path)
     item = items_df.iloc[n]
     print(len(dep_feature.get_features(item)))
     print("target head:", dep_feature.target_head)
     print("senti head:", dep_feature.senti_head)
 
 
-def test_write_all_instances_to_file(items_df, dep_feature):
-    with open("../../output/test_dependency.csv", "w") as f_out:
-        for idx in range(0,len(items_df)):
-            item = items_df.iloc[idx]
-            print(dep_feature.get_features(item), file=f_out)
+def test_write_all_instances_to_file(items_df_path, dep_feature):
+    items_df = pd.read_csv(items_df_path)
+    with open("../output/instances/test_dependency.csv", "w") as f_out:
+            for idx in range(0,len(items_df)):
+                try:
+                    item = items_df.iloc[idx]
+                    print(dep_feature.get_features(item), file=f_out)
+                except NotATargetRelationError:
+                    print(f'Row {idx} in {os.path.split(items_df_path)[1]} is skipped, since it is not a sentiment-expression-to-target (probably a sentiment-expression-to-source relation instead).')
+                    continue
 
 
 if __name__ == "__main__":
-    items_df = pd.read_csv("../../output/unsc.csv")
+    items_df_path = "../output/UNSC_2014_SPV.7154_sentsplit.csv"
     dep_feature = DependencyParseFeatures()
-    #test_single_instance(3, items_df, dep_feature)
-    test_write_all_instances_to_file(items_df, dep_feature)
+    # test_single_instance(3, items_df_path, dep_feature)
+    test_write_all_instances_to_file(items_df_path, dep_feature)

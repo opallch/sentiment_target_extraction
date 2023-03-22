@@ -7,6 +7,19 @@ import pandas as pd
 from spacy import displacy
 from nltk.tree import ParentedTree, Tree
 from nltk.tokenize import word_tokenize
+from nltk.tokenize.treebank import TreebankWordDetokenizer
+
+#### Exceptions ####
+class NotATargetRelationError(Exception):
+    pass
+
+
+class SentiExprHeadNotFoundError(Exception):
+    pass
+        
+
+class TargetHeadNotFoundError(Exception):
+    pass
 
 #### for dependency features ####
 
@@ -271,7 +284,7 @@ class IndexableSpannotatableParentedTree(ParentedTree):
         x = 0
         for subtree in self.subtrees():
             subtree._span_start = x
-            subtree._span_end = x + len(subtree.leaves()) - 1
+            subtree._span_end = x + len(subtree.leaves())
             if subtree.height() == 2:
                 x += 1
 
@@ -291,53 +304,44 @@ class IndexableSpannotatableParentedTree(ParentedTree):
     def span_end(self):
         return self._span_end
 
-#### for creating training data ####
-
-def create_training_data(df, parser):
-    cpf = ConstituencyParseFeatures()
-    dpf = DependencyParseFeatures()
-    X, y = [], []
-    for row in df.iterrows():
-        row = row[1]
-        for k, v in transform_spans(row).items():
-            row[k] = v
-        tree = self.parse_sent(row["sentence"])
-        tree.add_spans()
-        candidates = get_candidates(row["sentence"], parser, tree)
-        for c in candidates:
-            instance = row.copy()
-            if (c.span_start() == row["targetStart"]) and (c.span_end() == row["targetEnd"]):
-                y.append(1)
-            else:
-                y.append(0)
-            instance["targetStart"] = c.span_start()
-            instance["targetEnd"] = c.span_end()
-            c_f = cpf.get_features(instance)
-            d_f = dpf.get_features(row)
-            X.append(c_f + d_f)
-    return X, y
-
 
 def get_subtree_by_span(tree, span_start, span_end):
-    trees = list(
-        tree.subtrees(
-            filter=lambda x: (x.span_start() == span_start) and \
-                             (x.span_end() == span_end)
-        )
-    )
-    if trees:
-        return trees[-1]
+    if tree.span_start() == span_start and tree.span_end() == span_end:
+        return tree
+    
     else:
+        subtrees = []
+
+        for subtree in tree.subtrees():
+            if subtree.span_start() <= span_start and subtree.span_end() >= span_end:
+                subtrees.append(subtree)
+            
+        if subtrees:
+            return subtrees[-1]
+
         return None
 
 
-def transform_spans(df_row):
+def char_span_to_token_span(df_row, tokenize_func=word_tokenize):
     return (
-        len(word_tokenize(df_row["sentence"][:df_row["sentexprStart"]])),
-        len(word_tokenize(df_row["sentence"][:df_row["sentexprEnd"]])),
-        len(word_tokenize(df_row["sentence"][:df_row["targetStart"]])),
-        len(word_tokenize(df_row["sentence"][:df_row["targetEnd"]]))
+        len(tokenize_func(df_row["sentence"][:df_row["sentexprStart"]])),
+        len(tokenize_func(df_row["sentence"][:df_row["sentexprEnd"]])),
+        len(tokenize_func(df_row["sentence"][:df_row["targetStart"]])),
+        len(tokenize_func(df_row["sentence"][:df_row["targetEnd"]]))
     )
+
+
+def token_span_to_char_span(df_row, token_span_start, token_span_end, tokenize_func=word_tokenize):
+    tokens = tokenize_func(df_row["sentence"])
+    tmp_str = ''
+
+    tmp_str = TreebankWordDetokenizer().detokenize(tokens[:token_span_start])
+    char_span_start = len(tmp_str)
+
+    tmp_str = TreebankWordDetokenizer().detokenize(tokens[:token_span_end])
+    char_span_end = len(tmp_str) 
+
+    return char_span_start, char_span_end
 
 
 def parse_sent(sent, parser):
@@ -347,23 +351,8 @@ def parse_sent(sent, parser):
     return tree
 
 
-def get_candidates(sent, tree):
+def get_candidates(tree):
     return [
         subtree for subtree in list(tree.subtrees())[1:]
         if subtree.label() in {"NP", "S"}
     ]
-
-
-# if __name__ == "__main__":
-#     items_df = pd.read_pickle("../test_files/items.pkl")
-#     item = items_df.iloc[1100]
-#     nlp = spacy.load('en_core_web_sm')
-#     sentence = item.sentence
-#     sent_doc = nlp(sentence)
-#     displacy.serve(sent_doc, style='dep')
-#     root = next(sent_doc.sents).root
-#     lca = lowest_common_ancestor(sent_doc[9], sent_doc[15], root)
-#     print(lca) 
-#     print(
-#         distance_btw_3_pts(sent_doc[9], sent_doc[15], lca)
-#     )
